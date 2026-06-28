@@ -84,12 +84,40 @@ def test_release_docs_makefile_and_mkdocs_nav_define_validation_path() -> None:
         "traces/",
         "private EPUB exports",
         "local converted book trees",
+        "Calibre" + " Library",
+        "external source",
+        "Copyright Clearance Center",
+        "no chapter text",
+        "no converted book export",
     ):
         assert required in release_docs
 
     assert "validate:" in makefile
     assert "scripts/validate-public-release.py" in makefile
     assert "Release Readiness: release-readiness.md" in mkdocs_config
+
+
+def test_github_pages_workflow_is_pinned_and_builds_mkdocs() -> None:
+    workflow = Path(".github/workflows/pages.yml").read_text(encoding="utf-8")
+
+    for required in (
+        "name: Publish Docs",
+        "permissions:",
+        "contents: read",
+        "pages: write",
+        "id-token: write",
+        "environment:",
+        "name: github-pages",
+        "uv run mkdocs build --strict",
+        "path: site",
+        "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
+        "actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b",
+        "actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa",
+        "actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e",
+    ):
+        assert required in workflow
+
+    assert "@v" not in workflow
 
 
 def test_public_release_cli_writes_clean_report(tmp_path) -> None:

@@ -57,12 +57,29 @@ Do not publish or commit:
 - database files
 - local logs
 - private EPUB exports from local ebook-management tools
+- paths from Calibre Library
 - local converted book trees outside this repository
 - real provider keys, Hugging Face tokens, cookies, JWTs, or SSH keys
 
 The public repo may mention the source URL and the reference repository, but it
 must not vendor book text, purchased EPUB files, model weights, local traces, or
 machine-local paths.
+
+## external source Copyright Guard
+
+Official source surface checked on 2026-06-28:
+
+- [external source Terms of Service](https://github.com/pankaj28843/mac-llm-ops-lab/) says external source
+  and its content providers retain ownership and copyright in site content and
+  materials.
+- [external source Rights and Permissions](https://github.com/pankaj28843/mac-llm-ops-lab/) directs
+  reuse licensing through the Copyright Clearance Center or an explicit
+  permission request.
+
+For this public repo and GitHub Pages site, the rule is: links and short
+paraphrase are allowed; no chapter text, no images, no screenshots, no tables,
+no converted book export, no purchased EPUB/PDF, and no copied companion-repo
+code unless a future change records a reviewed license basis.
 
 ## Current Honesty Boundary
 

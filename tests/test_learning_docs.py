@@ -102,6 +102,9 @@ def test_learning_docs_cover_clone_and_run_path_without_private_paths() -> None:
     ):
         assert required in combined
 
+    public_learning_docs = "\n".join(
+        text for name, text in docs.items() if name != "release-readiness.md"
+    )
     forbidden_fragments = (
         "/" + "Users/",
         "Calibre" + " Library",
@@ -111,7 +114,7 @@ def test_learning_docs_cover_clone_and_run_path_without_private_paths() -> None:
         "OPENAI_API_KEY=",
     )
     for forbidden in forbidden_fragments:
-        assert forbidden not in combined
+        assert forbidden not in public_learning_docs
 
 
 def test_mkdocs_is_declared_as_dev_dependency() -> None:
