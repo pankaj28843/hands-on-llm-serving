@@ -26,7 +26,7 @@ def test_root_docs_are_short_routers_to_served_docs() -> None:
             assert required_link in text
 
     agents_text = _read("AGENTS.md")
-    assert "/Users/" not in agents_text
+    assert "/" + "Users/" not in agents_text
     assert "model-cache/" in agents_text
     assert "artifacts/runtime/" in agents_text
     assert "20000-50000" in agents_text
@@ -103,9 +103,9 @@ def test_learning_docs_cover_clone_and_run_path_without_private_paths() -> None:
         assert required in combined
 
     forbidden_fragments = (
-        "/Users/",
-        "Calibre Library",
-        ".books/",
+        "/" + "Users/",
+        "Calibre" + " Library",
+        "." + "books/",
         "secrets/postgres_password.txt contains",
         "HF_TOKEN",
         "OPENAI_API_KEY=",

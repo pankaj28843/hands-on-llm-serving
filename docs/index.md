@@ -22,6 +22,8 @@ Mac Studio clusters.
    Phoenix traces, and benchmark evidence.
 7. Read [Mac Studio Cluster](mac-studio-cluster.md) before making any cluster
    claim.
+8. Run [Release Readiness](release-readiness.md) before publishing or handing
+   the repo to someone else.
 
 ## Clone And Run
 

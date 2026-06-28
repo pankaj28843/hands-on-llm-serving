@@ -18,6 +18,7 @@ nav:
   - Backends: backends.md
   - Benchmarks: benchmarks.md
   - Mac Studio Cluster: mac-studio-cluster.md
+  - Release Readiness: release-readiness.md
   - Runtime Stack: runtime-stack.md
   - Persistence: persistence.md
   - Observability: observability.md
