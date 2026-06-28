@@ -1,9 +1,10 @@
+import asyncio
 import json
 from collections.abc import AsyncIterator
 
 from fastapi.testclient import TestClient
 
-from mac_llm_ops_lab.app import create_app
+from mac_llm_ops_lab.app import _stream_events, create_app
 
 
 class FakeBackend:
@@ -12,11 +13,14 @@ class FakeBackend:
         *,
         ready_after_load: bool = True,
         generation_error: Exception | None = None,
+        stream_error: Exception | None = None,
     ) -> None:
         self.ready_after_load = ready_after_load
         self.generation_error = generation_error
+        self.stream_error = stream_error
         self.loaded = 0
         self.closed = 0
+        self.stream_closed = 0
         self.generated_prompts: list[str] = []
 
     async def load(self) -> None:
@@ -39,8 +43,13 @@ class FakeBackend:
 
     async def stream(self, prompt: str, model: str) -> AsyncIterator[str]:
         self.generated_prompts.append(f"{model}:{prompt}")
-        yield "fake "
-        yield "stream"
+        try:
+            yield "fake "
+            if self.stream_error is not None:
+                raise self.stream_error
+            yield "stream"
+        finally:
+            self.stream_closed += 1
 
 
 def test_app_constructs_with_fake_backend_and_no_external_services() -> None:
@@ -157,3 +166,45 @@ def test_generation_backend_failures_return_sanitized_error() -> None:
     }
     assert "secret prompt" not in response.text
     assert "raw backend failure" not in response.text
+
+
+def test_closing_streaming_events_closes_backend_stream() -> None:
+    backend = FakeBackend()
+
+    async def consume_one_content_chunk_then_close() -> None:
+        events = _stream_events(backend, prompt="hello", model="fake-local-model")
+        await anext(events)
+        await anext(events)
+        await events.aclose()
+
+    asyncio.run(consume_one_content_chunk_then_close())
+
+    assert backend.generated_prompts == ["fake-local-model:hello"]
+    assert backend.stream_closed == 1
+
+
+def test_streaming_backend_failures_emit_sanitized_error_chunk() -> None:
+    backend = FakeBackend(stream_error=RuntimeError("raw stream failure"))
+
+    async def collect_stream_events() -> list[str]:
+        return [
+            event
+            async for event in _stream_events(
+                backend, prompt="secret prompt", model="fake-local-model"
+            )
+        ]
+
+    lines = asyncio.run(collect_stream_events())
+    data_lines = [line.removeprefix("data: ").strip() for line in lines]
+    events = [json.loads(line) for line in data_lines[:-1]]
+
+    assert data_lines[-1] == "[DONE]"
+    assert events[-1]["choices"][0]["delta"] == {}
+    assert events[-1]["choices"][0]["finish_reason"] == "error"
+    assert events[-1]["error"] == {
+        "code": "backend_stream_failed",
+        "message": "Backend stream failed",
+    }
+    assert "secret prompt" not in lines[-2]
+    assert "raw stream failure" not in lines[-2]
+    assert backend.stream_closed == 1

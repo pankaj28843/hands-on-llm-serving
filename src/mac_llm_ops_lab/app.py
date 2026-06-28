@@ -155,17 +155,35 @@ async def _stream_events(
         delta={"role": "assistant"},
         finish_reason=None,
     )
-    async for chunk in backend.stream(prompt, model):
+    try:
+        async for chunk in backend.stream(prompt, model):
+            yield _sse_event(
+                model=model,
+                delta={"content": chunk},
+                finish_reason=None,
+            )
+    except Exception:
         yield _sse_event(
             model=model,
-            delta={"content": chunk},
-            finish_reason=None,
+            delta={},
+            finish_reason="error",
+            error={
+                "code": "backend_stream_failed",
+                "message": "Backend stream failed",
+            },
         )
-    yield _sse_event(model=model, delta={}, finish_reason="stop")
+    else:
+        yield _sse_event(model=model, delta={}, finish_reason="stop")
     yield "data: [DONE]\n\n"
 
 
-def _sse_event(*, model: str, delta: dict[str, str], finish_reason: str | None) -> str:
+def _sse_event(
+    *,
+    model: str,
+    delta: dict[str, str],
+    finish_reason: str | None,
+    error: dict[str, str] | None = None,
+) -> str:
     event = {
         "id": f"chatcmpl-{uuid4().hex}",
         "object": "chat.completion.chunk",
@@ -173,4 +191,6 @@ def _sse_event(*, model: str, delta: dict[str, str], finish_reason: str | None) 
         "model": model,
         "choices": [{"index": 0, "delta": delta, "finish_reason": finish_reason}],
     }
+    if error is not None:
+        event["error"] = error
     return f"data: {json.dumps(event)}\n\n"
