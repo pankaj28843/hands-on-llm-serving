@@ -1,0 +1,375 @@
+import argparse
+import json
+import math
+import re
+from collections.abc import Iterable, Mapping
+from pathlib import Path
+
+VLLM_MLX_METRICS_SUMMARY_SCHEMA_VERSION = "vllm-mlx-metrics-summary/v1"
+VLLM_MLX_BENCHMARK_SUMMARY_SCHEMA_VERSION = "vllm-mlx-benchmark-summary/v1"
+VLLM_MLX_BACKEND_CONTRACT_SCHEMA_VERSION = "vllm-mlx-backend-contract/v1"
+
+_SAMPLE_PATTERN = re.compile(
+    r"^(?P<name>[a-zA-Z_:][a-zA-Z0-9_:]*)(?:\{(?P<labels>[^}]*)\})?\s+"
+    r"(?P<value>[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?|[-+]?Inf|NaN)$"
+)
+_REQUIRED_METRICS = (
+    "vllm_mlx_http_requests_total",
+    "vllm_mlx_inference_requests_total",
+    "vllm_mlx_prompt_tokens_total",
+    "vllm_mlx_completion_tokens_total",
+    "vllm_mlx_model_loaded",
+    "vllm_mlx_engine_type",
+    "vllm_mlx_scheduler_waiting_requests",
+    "vllm_mlx_scheduler_running_requests",
+    "vllm_mlx_metal_memory_bytes",
+    "vllm_mlx_cache_type",
+    "vllm_mlx_cache_hits",
+    "vllm_mlx_cache_misses",
+    "vllm_mlx_cache_hit_rate",
+    "vllm_mlx_cache_memory_bytes",
+    "vllm_mlx_cache_tokens_saved",
+)
+_BENCHMARK_REQUIRED_FIELDS = (
+    "model_id",
+    "prompt_set",
+    "concurrency",
+    "max_tokens",
+    "ttft_ms",
+    "e2e_latency_ms",
+    "gen_tps",
+    "requests_per_s",
+    "metal_active_gb",
+    "metal_peak_gb",
+    "metal_cache_gb",
+    "cache_hits",
+    "cache_misses",
+    "cache_hit_rate",
+    "tokens_saved",
+    "validated",
+)
+
+
+def summarize_vllm_mlx_metrics(metrics_text: str) -> dict[str, object]:
+    samples = _parse_prometheus_samples(metrics_text)
+    names = {sample["name"] for sample in samples}
+    missing_metrics = [name for name in _REQUIRED_METRICS if name not in names]
+    return {
+        "schema_version": VLLM_MLX_METRICS_SUMMARY_SCHEMA_VERSION,
+        "contract_passed": not missing_metrics,
+        "missing_required_metrics": missing_metrics,
+        "model_loaded": _sample_value(samples, "vllm_mlx_model_loaded") == 1.0,
+        "engine_type": _active_labeled_value(
+            samples,
+            metric_name="vllm_mlx_engine_type",
+            label_name="engine_type",
+            fallback="unknown",
+        ),
+        "cache_type": _active_labeled_value(
+            samples,
+            metric_name="vllm_mlx_cache_type",
+            label_name="cache_type",
+            fallback="unknown",
+        ),
+        "http_requests": _http_request_counts(samples),
+        "inference_requests": _inference_request_counts(samples),
+        "token_totals": {
+            "prompt": _sample_value(samples, "vllm_mlx_prompt_tokens_total"),
+            "completion": _sample_value(
+                samples,
+                "vllm_mlx_completion_tokens_total",
+            ),
+        },
+        "scheduler": {
+            "waiting_requests": _sample_value(
+                samples,
+                "vllm_mlx_scheduler_waiting_requests",
+            ),
+            "running_requests": _sample_value(
+                samples,
+                "vllm_mlx_scheduler_running_requests",
+            ),
+        },
+        "metal_memory_bytes": _kind_values(samples, "vllm_mlx_metal_memory_bytes"),
+        "cache": {
+            "hits": _sample_value(samples, "vllm_mlx_cache_hits"),
+            "misses": _sample_value(samples, "vllm_mlx_cache_misses"),
+            "hit_rate": _sample_value(samples, "vllm_mlx_cache_hit_rate"),
+            "memory_bytes": _sample_value(samples, "vllm_mlx_cache_memory_bytes"),
+            "tokens_saved": _sample_value(samples, "vllm_mlx_cache_tokens_saved"),
+        },
+    }
+
+
+def load_benchmark_rows(path: Path) -> list[dict[str, object]]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, list):
+        raise ValueError("benchmark JSON must contain a JSON list")
+    if any(not isinstance(row, Mapping) for row in payload):
+        raise ValueError("benchmark JSON list must contain objects")
+    return [dict(row) for row in payload]
+
+
+def build_benchmark_summary(
+    rows: Iterable[Mapping[str, object]],
+) -> dict[str, object]:
+    normalized_rows = [dict(row) for row in rows]
+    if not normalized_rows:
+        raise ValueError("benchmark rows must not be empty")
+    for row in normalized_rows:
+        _validate_benchmark_row(row)
+
+    validated_count = sum(1 for row in normalized_rows if row["validated"] is True)
+    return {
+        "schema_version": VLLM_MLX_BENCHMARK_SUMMARY_SCHEMA_VERSION,
+        "contract_passed": True,
+        "run_count": len(normalized_rows),
+        "validated_count": validated_count,
+        "all_validated": validated_count == len(normalized_rows),
+        "models": _sorted_unique_strings(row["model_id"] for row in normalized_rows),
+        "prompt_sets": _sorted_unique_strings(
+            (row["prompt_set"] for row in normalized_rows),
+        ),
+        "concurrency_levels": _sorted_unique_numbers(
+            (row["concurrency"] for row in normalized_rows),
+        ),
+        "max_tokens": _sorted_unique_numbers(
+            row["max_tokens"] for row in normalized_rows
+        ),
+        "latency_ms": {
+            "ttft_avg": _average(_float_values(normalized_rows, "ttft_ms")),
+            "e2e_avg": _average(_float_values(normalized_rows, "e2e_latency_ms")),
+            "e2e_p95": _percentile(
+                _float_values(normalized_rows, "e2e_latency_ms"),
+                percentile=0.95,
+            ),
+            "e2e_max": max(_float_values(normalized_rows, "e2e_latency_ms")),
+        },
+        "throughput": {
+            "gen_tps_avg": _average(_float_values(normalized_rows, "gen_tps")),
+            "requests_per_s_avg": _average(
+                _float_values(normalized_rows, "requests_per_s"),
+            ),
+        },
+        "metal_memory_gb": {
+            "active_max": max(_float_values(normalized_rows, "metal_active_gb")),
+            "peak_max": max(_float_values(normalized_rows, "metal_peak_gb")),
+            "cache_max": max(_float_values(normalized_rows, "metal_cache_gb")),
+        },
+        "cache": {
+            "hits_total": sum(_float_values(normalized_rows, "cache_hits")),
+            "misses_total": sum(_float_values(normalized_rows, "cache_misses")),
+            "hit_rate_avg": _average(_float_values(normalized_rows, "cache_hit_rate")),
+            "tokens_saved_total": sum(_float_values(normalized_rows, "tokens_saved")),
+        },
+    }
+
+
+def build_backend_contract_report(
+    *,
+    metrics_text: str,
+    benchmark_rows: Iterable[Mapping[str, object]],
+) -> dict[str, object]:
+    metrics = summarize_vllm_mlx_metrics(metrics_text)
+    benchmark = build_benchmark_summary(benchmark_rows)
+    return {
+        "schema_version": VLLM_MLX_BACKEND_CONTRACT_SCHEMA_VERSION,
+        "contract_passed": metrics["contract_passed"] and benchmark["contract_passed"],
+        "metrics": metrics,
+        "benchmark": benchmark,
+    }
+
+
+def write_backend_contract_report(
+    *,
+    metrics_path: Path,
+    benchmark_path: Path,
+    report_path: Path,
+) -> Path:
+    report = build_backend_contract_report(
+        metrics_text=metrics_path.read_text(encoding="utf-8"),
+        benchmark_rows=load_benchmark_rows(benchmark_path),
+    )
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(
+        json.dumps(report, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return report_path
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="Build a vllm-mlx metrics and benchmark contract report.",
+    )
+    parser.add_argument("--metrics-path", required=True)
+    parser.add_argument("--benchmark-path", required=True)
+    parser.add_argument("--report-path", required=True)
+    args = parser.parse_args(argv)
+    write_backend_contract_report(
+        metrics_path=Path(args.metrics_path),
+        benchmark_path=Path(args.benchmark_path),
+        report_path=Path(args.report_path),
+    )
+    return 0
+
+
+def _parse_prometheus_samples(metrics_text: str) -> list[dict[str, object]]:
+    samples: list[dict[str, object]] = []
+    for raw_line in metrics_text.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        match = _SAMPLE_PATTERN.match(line)
+        if not match:
+            continue
+        samples.append(
+            {
+                "name": match.group("name"),
+                "labels": _parse_labels(match.group("labels") or ""),
+                "value": _parse_float(match.group("value")),
+            }
+        )
+    return samples
+
+
+def _parse_labels(labels: str) -> dict[str, str]:
+    if not labels:
+        return {}
+    parsed: dict[str, str] = {}
+    for part in re.split(r',(?=(?:[^"]*"[^"]*")*[^"]*$)', labels):
+        key, _, value = part.partition("=")
+        parsed[key.strip()] = value.strip().strip('"')
+    return parsed
+
+
+def _parse_float(value: str) -> float:
+    if value == "+Inf":
+        return math.inf
+    if value == "-Inf":
+        return -math.inf
+    return float(value)
+
+
+def _sample_value(
+    samples: list[dict[str, object]],
+    metric_name: str,
+    *,
+    default: float = 0.0,
+) -> float:
+    for sample in samples:
+        if sample["name"] == metric_name:
+            return float(sample["value"])
+    return default
+
+
+def _active_labeled_value(
+    samples: list[dict[str, object]],
+    *,
+    metric_name: str,
+    label_name: str,
+    fallback: str,
+) -> str:
+    for sample in samples:
+        labels = sample["labels"]
+        if (
+            sample["name"] == metric_name
+            and isinstance(labels, Mapping)
+            and float(sample["value"]) == 1.0
+        ):
+            value = labels.get(label_name)
+            return value if isinstance(value, str) else fallback
+    return fallback
+
+
+def _http_request_counts(samples: list[dict[str, object]]) -> list[dict[str, object]]:
+    rows = []
+    for sample in samples:
+        labels = sample["labels"]
+        if sample["name"] != "vllm_mlx_http_requests_total" or not isinstance(
+            labels,
+            Mapping,
+        ):
+            continue
+        rows.append(
+            {
+                "method": str(labels.get("method", "")),
+                "path": str(labels.get("path", "")),
+                "status_code": str(labels.get("status_code", "")),
+                "count": float(sample["value"]),
+            }
+        )
+    return rows
+
+
+def _inference_request_counts(
+    samples: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    rows = []
+    for sample in samples:
+        labels = sample["labels"]
+        if sample["name"] != "vllm_mlx_inference_requests_total" or not isinstance(
+            labels,
+            Mapping,
+        ):
+            continue
+        rows.append(
+            {
+                "endpoint": str(labels.get("endpoint", "")),
+                "result": str(labels.get("result", "")),
+                "stream": str(labels.get("stream", "")),
+                "count": float(sample["value"]),
+            }
+        )
+    return rows
+
+
+def _kind_values(
+    samples: list[dict[str, object]], metric_name: str
+) -> dict[str, float]:
+    values: dict[str, float] = {}
+    for sample in samples:
+        labels = sample["labels"]
+        if sample["name"] == metric_name and isinstance(labels, Mapping):
+            kind = labels.get("kind")
+            if isinstance(kind, str):
+                values[kind] = float(sample["value"])
+    return values
+
+
+def _validate_benchmark_row(row: Mapping[str, object]) -> None:
+    for field in _BENCHMARK_REQUIRED_FIELDS:
+        if field not in row:
+            raise ValueError(f"benchmark row missing required field: {field}")
+
+
+def _sorted_unique_strings(values: Iterable[object]) -> list[str]:
+    return sorted({str(value) for value in values})
+
+
+def _sorted_unique_numbers(values: Iterable[object]) -> list[int | float]:
+    return sorted({_number(value) for value in values})
+
+
+def _float_values(rows: list[Mapping[str, object]], field: str) -> list[float]:
+    return [_number(row[field]) for row in rows]
+
+
+def _number(value: object) -> int | float:
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise ValueError("numeric benchmark fields must be numbers")
+    return value
+
+
+def _average(values: list[float]) -> float:
+    return sum(values) / len(values)
+
+
+def _percentile(values: list[float], *, percentile: float) -> float:
+    ordered = sorted(values)
+    index = max(0, math.ceil(len(ordered) * percentile) - 1)
+    return ordered[index]
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
