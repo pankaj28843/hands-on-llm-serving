@@ -1,0 +1,120 @@
+from pathlib import Path
+
+
+def _read(path: str) -> str:
+    return Path(path).read_text(encoding="utf-8")
+
+
+def test_root_docs_are_short_routers_to_served_docs() -> None:
+    required_root_docs = {
+        "AGENTS.md": (
+            "docs/development.md",
+            "docs/operations.md",
+            "docs/vision.md",
+            "docs/requirements.md",
+            "docs/design.md",
+        ),
+        "vision.md": ("docs/vision.md",),
+        "requirements.md": ("docs/requirements.md",),
+        "design.md": ("docs/design.md",),
+    }
+
+    for path, required_links in required_root_docs.items():
+        text = _read(path)
+        assert len(text.splitlines()) <= 80
+        for required_link in required_links:
+            assert required_link in text
+
+    agents_text = _read("AGENTS.md")
+    assert "/Users/" not in agents_text
+    assert "model-cache/" in agents_text
+    assert "artifacts/runtime/" in agents_text
+    assert "20000-50000" in agents_text
+
+
+def test_mkdocs_config_serves_learning_docs_with_explicit_nav() -> None:
+    config = _read("mkdocs.yml")
+
+    for required in (
+        "site_name: Mac LLM Ops Lab",
+        "docs_dir: docs",
+        "repo_url: https://github.com/pankaj28843/mac-llm-ops-lab",
+        "theme:",
+        "name: mkdocs",
+        "nav:",
+        "Home: index.md",
+        "Vision: vision.md",
+        "Requirements: requirements.md",
+        "Design: design.md",
+        "Development: development.md",
+        "Operations: operations.md",
+        "Backends: backends.md",
+        "Benchmarks: benchmarks.md",
+        "Mac Studio Cluster: mac-studio-cluster.md",
+        "Runtime Stack: runtime-stack.md",
+        "Observability: observability.md",
+        "Open WebUI: open-webui.md",
+    ):
+        assert required in config
+
+
+def test_learning_docs_cover_clone_and_run_path_without_private_paths() -> None:
+    docs = {
+        path.name: path.read_text(encoding="utf-8")
+        for path in Path("docs").glob("*.md")
+    }
+
+    for required_page in (
+        "index.md",
+        "vision.md",
+        "requirements.md",
+        "design.md",
+        "development.md",
+        "operations.md",
+        "backends.md",
+        "benchmarks.md",
+        "mac-studio-cluster.md",
+    ):
+        assert required_page in docs
+
+    combined = "\n".join(docs.values())
+    for required in (
+        "uv sync",
+        "uv run pytest",
+        "uv run ruff check .",
+        "uv run ruff format --check .",
+        "docker compose -f compose.yaml config --format json",
+        "uv run mkdocs build --strict",
+        "http://localhost:28000",
+        "http://localhost:23000",
+        "http://localhost:26006",
+        "PostgreSQL",
+        "Phoenix",
+        "OpenTelemetry",
+        "Open WebUI",
+        "vllm-mlx",
+        "mlx-community/Qwen3-0.6B-8bit",
+        "Mac Studio",
+        "Do not extrapolate",
+        "reference repository",
+        "https://www.external_source.com/library/view/mac-llm-ops-lab/9798341621480/",
+        "https://github.com/pankaj28843/mac-llm-ops-lab/",
+    ):
+        assert required in combined
+
+    forbidden_fragments = (
+        "/Users/",
+        "Calibre Library",
+        ".books/",
+        "secrets/postgres_password.txt contains",
+        "HF_TOKEN",
+        "OPENAI_API_KEY=",
+    )
+    for forbidden in forbidden_fragments:
+        assert forbidden not in combined
+
+
+def test_mkdocs_is_declared_as_dev_dependency() -> None:
+    pyproject = _read("pyproject.toml")
+
+    assert '"mkdocs>=' in pyproject

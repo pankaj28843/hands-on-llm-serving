@@ -20,6 +20,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "mkdocs>=1.6,<2.0",
     "pytest>=8.2,<9.0",
     "ruff>=0.8,<1.0",
 ]

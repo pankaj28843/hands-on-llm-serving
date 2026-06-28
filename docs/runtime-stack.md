@@ -57,7 +57,7 @@ artifacts:
 
 ```bash
 mkdir -p secrets artifacts/runtime/2026-06-28T145945+0200-e2e
-# secrets/postgres_password.txt contains the local placeholder used by compose.
+printf 'local-dev-password\n' > secrets/postgres_password.txt
 docker compose up -d --build
 ```
 
