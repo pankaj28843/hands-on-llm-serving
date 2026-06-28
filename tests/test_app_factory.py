@@ -6,7 +6,8 @@ from mac_llm_ops_lab.app import create_app
 
 
 class FakeBackend:
-    def __init__(self) -> None:
+    def __init__(self, *, ready_after_load: bool = True) -> None:
+        self.ready_after_load = ready_after_load
         self.loaded = 0
         self.closed = 0
         self.generated_prompts: list[str] = []
@@ -18,7 +19,7 @@ class FakeBackend:
         self.closed += 1
 
     async def ready(self) -> bool:
-        return self.loaded == 1 and self.closed == 0
+        return self.ready_after_load and self.loaded == 1 and self.closed == 0
 
     async def list_models(self) -> list[dict[str, str]]:
         return [{"id": "fake-local-model", "object": "model"}]
@@ -66,3 +67,24 @@ def test_app_constructs_with_fake_backend_and_no_external_services() -> None:
     assert backend.loaded == 1
     assert backend.closed == 1
     assert backend.generated_prompts == ["fake-local-model:hello"]
+
+
+def test_liveness_does_not_require_backend_readiness() -> None:
+    backend = FakeBackend(ready_after_load=False)
+    app = create_app(backend=backend)
+
+    with TestClient(app) as client:
+        live_response = client.get("/live")
+        ready_response = client.get("/ready", headers={"x-request-id": "req-123"})
+
+    assert live_response.status_code == 200
+    assert live_response.json() == {"status": "alive"}
+    assert ready_response.status_code == 503
+    assert ready_response.headers["x-request-id"] == "req-123"
+    assert ready_response.json() == {
+        "error": {
+            "code": "backend_not_ready",
+            "message": "Backend is not ready",
+            "request_id": "req-123",
+        }
+    }

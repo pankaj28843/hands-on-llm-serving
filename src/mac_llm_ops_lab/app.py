@@ -6,7 +6,7 @@ from typing import Protocol
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Request, status
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 
@@ -47,6 +47,34 @@ def create_app(*, backend: ModelBackend) -> FastAPI:
 
     app = FastAPI(title="Mac LLM Ops Lab", lifespan=lifespan)
 
+    @app.middleware("http")
+    async def request_id_middleware(request: Request, call_next):
+        request_id = request.headers.get("x-request-id") or uuid4().hex
+        request.state.request_id = request_id
+        response = await call_next(request)
+        response.headers["x-request-id"] = request_id
+        return response
+
+    @app.exception_handler(HTTPException)
+    async def http_exception_handler(
+        request: Request, exc: HTTPException
+    ) -> JSONResponse:
+        detail = exc.detail if isinstance(exc.detail, dict) else {}
+        code = str(detail.get("code", "http_error"))
+        message = str(detail.get("message", "Request failed"))
+        request_id = getattr(request.state, "request_id", uuid4().hex)
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "error": {
+                    "code": code,
+                    "message": message,
+                    "request_id": request_id,
+                }
+            },
+            headers={"x-request-id": request_id},
+        )
+
     @app.get("/live")
     async def live() -> dict[str, str]:
         return {"status": "alive"}
@@ -57,7 +85,10 @@ def create_app(*, backend: ModelBackend) -> FastAPI:
         if not await active_backend.ready():
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail={"status": "not_ready"},
+                detail={
+                    "code": "backend_not_ready",
+                    "message": "Backend is not ready",
+                },
             )
         return {"status": "ready"}
 
