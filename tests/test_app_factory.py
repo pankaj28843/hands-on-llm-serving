@@ -200,6 +200,42 @@ def test_generation_backend_failures_increment_bounded_error_metric() -> None:
     assert "raw backend failure" not in metrics_response.text
 
 
+def test_generation_backend_failures_log_bounded_error_code_without_prompt_text(
+    caplog,
+) -> None:
+    caplog.set_level(logging.INFO, logger="mac_llm_ops_lab.http")
+    backend = FakeBackend(generation_error=RuntimeError("raw backend failure"))
+    app = create_app(backend=backend)
+
+    with TestClient(app, raise_server_exceptions=False) as client:
+        response = client.post(
+            "/v1/chat/completions",
+            headers={"x-request-id": "req-fail-log"},
+            json={
+                "model": "fake-local-model",
+                "messages": [{"role": "user", "content": "secret prompt"}],
+                "stream": False,
+            },
+        )
+
+    request_logs = [
+        record
+        for record in caplog.records
+        if record.name == "mac_llm_ops_lab.http"
+        and record.getMessage() == "http_request"
+    ]
+
+    assert response.status_code == 502
+    assert len(request_logs) == 1
+    record = request_logs[0]
+    assert record.request_id == "req-fail-log"
+    assert record.http_status_code == 502
+    assert record.model_id == "fake-local-model"
+    assert record.error_code == "backend_generation_failed"
+    assert "secret prompt" not in caplog.text
+    assert "raw backend failure" not in caplog.text
+
+
 def test_closing_streaming_events_closes_backend_stream() -> None:
     backend = FakeBackend()
 

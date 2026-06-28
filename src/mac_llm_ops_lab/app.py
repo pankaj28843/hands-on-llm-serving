@@ -83,6 +83,7 @@ def create_app(*, backend: ModelBackend, settings: Settings | None = None) -> Fa
                 "http_status_code": response.status_code,
                 "http_duration_ms": duration_ms,
                 "model_id": getattr(request.state, "model_id", ""),
+                "error_code": getattr(request.state, "error_code", ""),
             },
         )
         return response
@@ -234,6 +235,7 @@ def _error_response(
     *, request: Request, status_code: int, code: str, message: str
 ) -> JSONResponse:
     request_id = getattr(request.state, "request_id", uuid4().hex)
+    request.state.error_code = code
     request_id_header = _request_id_header(request)
     return JSONResponse(
         status_code=status_code,
