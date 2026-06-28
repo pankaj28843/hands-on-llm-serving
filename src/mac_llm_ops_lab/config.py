@@ -16,6 +16,11 @@ class Settings(BaseModel):
     openai_base_url: str = "http://127.0.0.1:8100/v1"
     openai_api_key: str | None = None
     openai_timeout_seconds: float = 30.0
+    otel_enabled: bool = False
+    otel_exporter_otlp_traces_endpoint: str | None = None
+    otel_capture_content: bool = False
+    otel_export_timeout_seconds: float = 10.0
+    phoenix_project_name: str = "mac-llm-ops-lab"
 
 
 def load_settings(env: Mapping[str, str] | None = None) -> Settings:
@@ -38,6 +43,22 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         values["openai_api_key"] = openai_api_key
     if timeout_seconds := source.get("MAC_LLM_OPS_OPENAI_TIMEOUT_SECONDS"):
         values["openai_timeout_seconds"] = float(timeout_seconds)
+    if otel_enabled := source.get("MAC_LLM_OPS_OTEL_ENABLED"):
+        values["otel_enabled"] = _parse_bool(otel_enabled)
+    if otel_endpoint := source.get("MAC_LLM_OPS_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"):
+        values["otel_exporter_otlp_traces_endpoint"] = otel_endpoint
+    elif phoenix_endpoint := source.get(
+        "MAC_LLM_OPS_PHOENIX_COLLECTOR_ENDPOINT"
+    ) or source.get("PHOENIX_COLLECTOR_ENDPOINT"):
+        values["otel_exporter_otlp_traces_endpoint"] = phoenix_endpoint
+    if otel_capture_content := source.get("MAC_LLM_OPS_OTEL_CAPTURE_CONTENT"):
+        values["otel_capture_content"] = _parse_bool(otel_capture_content)
+    if otel_timeout_seconds := source.get("MAC_LLM_OPS_OTEL_EXPORT_TIMEOUT_SECONDS"):
+        values["otel_export_timeout_seconds"] = float(otel_timeout_seconds)
+    if phoenix_project_name := source.get("MAC_LLM_OPS_PHOENIX_PROJECT_NAME") or source.get(
+        "PHOENIX_PROJECT_NAME"
+    ):
+        values["phoenix_project_name"] = phoenix_project_name
 
     return Settings(**values)
 

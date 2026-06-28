@@ -85,6 +85,13 @@ def test_local_runtime_stack_plan_declares_real_services_without_side_effects() 
         ),
         "MAC_LLM_OPS_OPENAI_TIMEOUT_SECONDS": "${MAC_LLM_OPS_OPENAI_TIMEOUT_SECONDS:-30}",
         "MAC_LLM_OPS_MODEL_ALLOWLIST": "${MAC_LLM_OPS_MODEL_ALLOWLIST:-}",
+        "MAC_LLM_OPS_OTEL_ENABLED": "${MAC_LLM_OPS_OTEL_ENABLED:-true}",
+        "MAC_LLM_OPS_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": (
+            "${MAC_LLM_OPS_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:-http://phoenix:6006/v1/traces}"
+        ),
+        "MAC_LLM_OPS_PHOENIX_PROJECT_NAME": (
+            "${MAC_LLM_OPS_PHOENIX_PROJECT_NAME:-mac-llm-ops-lab-local}"
+        ),
     }
     assert api["depends_on"] == {
         "phoenix": {"condition": "service_started"},

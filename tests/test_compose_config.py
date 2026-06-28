@@ -41,6 +41,13 @@ def test_compose_yaml_is_valid_and_keeps_real_backend_native_gated() -> None:
         "http://host.docker.internal:8100/v1"
     )
     assert api["environment"]["MAC_LLM_OPS_OPENAI_TIMEOUT_SECONDS"] == "30"
+    assert api["environment"]["MAC_LLM_OPS_OTEL_ENABLED"] == "true"
+    assert api["environment"]["MAC_LLM_OPS_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"] == (
+        "http://phoenix:6006/v1/traces"
+    )
+    assert api["environment"]["MAC_LLM_OPS_PHOENIX_PROJECT_NAME"] == (
+        "mac-llm-ops-lab-local"
+    )
 
     postgres = services["postgres"]
     assert postgres["image"] == "postgres:16"

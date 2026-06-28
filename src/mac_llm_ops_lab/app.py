@@ -2,17 +2,25 @@ import json
 import logging
 import time
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, nullcontext
 from typing import Protocol
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, StreamingResponse
+from opentelemetry.trace import SpanKind
 from pydantic import BaseModel, Field
 
 from mac_llm_ops_lab.config import Settings, load_settings
 from mac_llm_ops_lab.metrics import InMemoryMetrics
+from mac_llm_ops_lab.observability import (
+    NoopSpan,
+    Observability,
+    configure_observability,
+    mark_span_error,
+    safe_token_count,
+)
 
 HTTP_LOGGER = logging.getLogger("mac_llm_ops_lab.http")
 
@@ -42,9 +50,15 @@ class ChatCompletionRequest(BaseModel):
     stream: bool = False
 
 
-def create_app(*, backend: ModelBackend, settings: Settings | None = None) -> FastAPI:
+def create_app(
+    *,
+    backend: ModelBackend,
+    settings: Settings | None = None,
+    observability: Observability | None = None,
+) -> FastAPI:
     app_settings = settings or load_settings()
     metrics = InMemoryMetrics()
+    app_observability = observability or configure_observability(app_settings)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -58,45 +72,71 @@ def create_app(*, backend: ModelBackend, settings: Settings | None = None) -> Fa
     app = FastAPI(title=app_settings.service_name, lifespan=lifespan)
     app.state.settings = app_settings
     app.state.metrics = metrics
+    app.state.observability = app_observability
 
     @app.middleware("http")
     async def request_id_middleware(request: Request, call_next):
         request_id = request.headers.get(app_settings.request_id_header) or uuid4().hex
         request.state.request_id = request_id
         started_at = time.perf_counter()
-        response = await call_next(request)
-        duration_ms = (time.perf_counter() - started_at) * 1000
-        response.headers[app_settings.request_id_header] = request_id
         route = _request_route(request)
-        metrics.record_request(
-            route=route,
-            method=request.method,
-            status_code=response.status_code,
-            duration_ms=duration_ms,
-        )
-        error_code = getattr(request.state, "error_code", "")
-        if error_code:
-            metrics.record_http_error(
-                route=route,
-                status_code=response.status_code,
-                code=error_code,
-            )
-        HTTP_LOGGER.info(
-            "http_request",
-            extra={
-                "request_id": request_id,
-                "http_method": request.method,
-                "http_route": route,
-                "http_status_code": response.status_code,
-                "http_duration_ms": duration_ms,
-                "model_id": getattr(request.state, "model_id", ""),
-                "error_code": error_code,
-                "backend_id": type(
-                    getattr(request.app.state, "backend", backend)
-                ).__name__,
+        with app_observability.start_span(
+            f"{request.method} {route}",
+            kind=SpanKind.SERVER,
+            attributes={
+                "http.request.method": request.method,
+                "http.route": route,
+                "mac_llm_ops.request.id": request_id,
+                "mac_llm_ops.backend.kind": app_settings.backend_kind,
             },
-        )
-        return response
+        ) as span:
+            try:
+                response = await call_next(request)
+            except Exception:
+                mark_span_error(span, "unhandled_exception")
+                raise
+            duration_ms = (time.perf_counter() - started_at) * 1000
+            response.headers[app_settings.request_id_header] = request_id
+            route = _request_route(request)
+            span.set_attribute("http.route", route)
+            span.set_attribute("http.response.status_code", response.status_code)
+            span.set_attribute("mac_llm_ops.http.duration_ms", duration_ms)
+            if model_id := getattr(request.state, "model_id", ""):
+                span.set_attribute("mac_llm_ops.model.id", model_id)
+            metrics.record_request(
+                route=route,
+                method=request.method,
+                status_code=response.status_code,
+                duration_ms=duration_ms,
+            )
+            error_code = getattr(request.state, "error_code", "")
+            if error_code:
+                metrics.record_http_error(
+                    route=route,
+                    status_code=response.status_code,
+                    code=error_code,
+                )
+                span.set_attribute("error.type", error_code)
+                if response.status_code >= 500:
+                    mark_span_error(span, error_code)
+            elif response.status_code >= 500:
+                mark_span_error(span, str(response.status_code))
+            HTTP_LOGGER.info(
+                "http_request",
+                extra={
+                    "request_id": request_id,
+                    "http_method": request.method,
+                    "http_route": route,
+                    "http_status_code": response.status_code,
+                    "http_duration_ms": duration_ms,
+                    "model_id": getattr(request.state, "model_id", ""),
+                    "error_code": error_code,
+                    "backend_id": type(
+                        getattr(request.app.state, "backend", backend)
+                    ).__name__,
+                },
+            )
+            return response
 
     @app.exception_handler(HTTPException)
     async def http_exception_handler(
@@ -173,24 +213,54 @@ def create_app(*, backend: ModelBackend, settings: Settings | None = None) -> Fa
                     prompt=prompt,
                     model=payload.model,
                     metrics=metrics,
+                    observability=app_observability,
+                    request_id=getattr(request.state, "request_id", ""),
+                    backend_kind=app_settings.backend_kind,
                 ),
                 media_type="text/event-stream",
             )
 
-        try:
-            content = await active_backend.generate(prompt, payload.model)
-        except Exception as exc:
-            metrics.record_backend_generation_error(
+        scheduler_attributes = _scheduler_span_attributes(
+            model=payload.model,
+            request_id=getattr(request.state, "request_id", ""),
+            backend_kind=app_settings.backend_kind,
+        )
+        with app_observability.start_span(
+            "mac_llm_ops.scheduler.dispatch",
+            attributes=scheduler_attributes,
+        ):
+            backend_attributes = _backend_span_attributes(
                 model=payload.model,
-                code="backend_generation_failed",
+                prompt=prompt,
+                request_id=getattr(request.state, "request_id", ""),
+                backend_kind=app_settings.backend_kind,
             )
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail={
-                    "code": "backend_generation_failed",
-                    "message": "Backend generation failed",
-                },
-            ) from exc
+            with app_observability.start_span(
+                f"gen_ai.chat {payload.model}",
+                kind=SpanKind.CLIENT,
+                attributes=backend_attributes,
+            ) as backend_span:
+                try:
+                    content = await active_backend.generate(prompt, payload.model)
+                except Exception as exc:
+                    metrics.record_backend_generation_error(
+                        model=payload.model,
+                        code="backend_generation_failed",
+                    )
+                    mark_span_error(backend_span, "backend_generation_failed")
+                    raise HTTPException(
+                        status_code=status.HTTP_502_BAD_GATEWAY,
+                        detail={
+                            "code": "backend_generation_failed",
+                            "message": "Backend generation failed",
+                        },
+                    ) from exc
+                backend_span.set_attribute(
+                    "gen_ai.usage.output_tokens",
+                    safe_token_count(content),
+                )
+                backend_span.set_attribute("gen_ai.response.model", payload.model)
+                backend_span.set_attribute("gen_ai.response.finish_reasons", ("stop",))
         metrics.record_generated_text(model=payload.model, content=content)
         return _completion_response(model=payload.model, content=content)
 
@@ -291,34 +361,73 @@ async def _stream_events(
     prompt: str,
     model: str,
     metrics: InMemoryMetrics | None = None,
+    observability: Observability | None = None,
+    request_id: str = "",
+    backend_kind: str = "fake",
 ) -> AsyncIterator[str]:
-    yield _sse_event(
-        model=model,
-        delta={"role": "assistant"},
-        finish_reason=None,
+    scheduler_span = (
+        observability.start_span(
+            "mac_llm_ops.scheduler.dispatch",
+            attributes=_scheduler_span_attributes(
+                model=model,
+                request_id=request_id,
+                backend_kind=backend_kind,
+            ),
+        )
+        if observability is not None
+        else nullcontext(NoopSpan())
     )
-    try:
-        async for chunk in backend.stream(prompt, model):
+    with scheduler_span:
+        stream_span = (
+            observability.start_span(
+                f"gen_ai.stream {model}",
+                kind=SpanKind.CLIENT,
+                attributes=_backend_span_attributes(
+                    model=model,
+                    prompt=prompt,
+                    request_id=request_id,
+                    backend_kind=backend_kind,
+                ),
+            )
+            if observability is not None
+            else nullcontext(NoopSpan())
+        )
+        with stream_span as span:
             yield _sse_event(
                 model=model,
-                delta={"content": chunk},
+                delta={"role": "assistant"},
                 finish_reason=None,
             )
-    except Exception:
-        if metrics is not None:
-            metrics.record_stream_error(model=model)
-        yield _sse_event(
-            model=model,
-            delta={},
-            finish_reason="error",
-            error={
-                "code": "backend_stream_failed",
-                "message": "Backend stream failed",
-            },
-        )
-    else:
-        yield _sse_event(model=model, delta={}, finish_reason="stop")
-    yield "data: [DONE]\n\n"
+            output_tokens = 0
+            try:
+                async for chunk in backend.stream(prompt, model):
+                    output_tokens += safe_token_count(chunk)
+                    yield _sse_event(
+                        model=model,
+                        delta={"content": chunk},
+                        finish_reason=None,
+                    )
+            except Exception:
+                span.set_attribute("gen_ai.usage.output_tokens", output_tokens)
+                span.set_attribute("gen_ai.response.model", model)
+                mark_span_error(span, "backend_stream_failed")
+                if metrics is not None:
+                    metrics.record_stream_error(model=model)
+                yield _sse_event(
+                    model=model,
+                    delta={},
+                    finish_reason="error",
+                    error={
+                        "code": "backend_stream_failed",
+                        "message": "Backend stream failed",
+                    },
+                )
+            else:
+                span.set_attribute("gen_ai.usage.output_tokens", output_tokens)
+                span.set_attribute("gen_ai.response.model", model)
+                span.set_attribute("gen_ai.response.finish_reasons", ("stop",))
+                yield _sse_event(model=model, delta={}, finish_reason="stop")
+            yield "data: [DONE]\n\n"
 
 
 def _sse_event(
@@ -338,3 +447,36 @@ def _sse_event(
     if error is not None:
         event["error"] = error
     return f"data: {json.dumps(event)}\n\n"
+
+
+def _scheduler_span_attributes(
+    *,
+    model: str,
+    request_id: str,
+    backend_kind: str,
+) -> dict[str, object]:
+    return {
+        "mac_llm_ops.request.id": request_id,
+        "mac_llm_ops.backend.kind": backend_kind,
+        "mac_llm_ops.model.id": model,
+        "mac_llm_ops.queue.wait_ms": 0.0,
+    }
+
+
+def _backend_span_attributes(
+    *,
+    model: str,
+    prompt: str,
+    request_id: str,
+    backend_kind: str,
+) -> dict[str, object]:
+    provider = "openai-compatible" if backend_kind == "openai-compatible" else "local"
+    return {
+        "mac_llm_ops.request.id": request_id,
+        "mac_llm_ops.backend.kind": backend_kind,
+        "mac_llm_ops.model.id": model,
+        "gen_ai.operation.name": "chat",
+        "gen_ai.provider.name": provider,
+        "gen_ai.request.model": model,
+        "gen_ai.usage.input_tokens": safe_token_count(prompt),
+    }

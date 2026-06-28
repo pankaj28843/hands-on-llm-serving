@@ -57,6 +57,12 @@ workflow integration, cancellation, benchmarks, MkDocs, cluster routing, and
 release/no-leak checks are still pending. PostgreSQL persistence now has
 SQLAlchemy/Alembic code and a local migration plus sample insert/read proof
 under ignored `artifacts/runtime/2026-06-28T154545+0200-postgres-persistence/`.
+OpenTelemetry instrumentation is now code-backed for HTTP request spans,
+scheduler dispatch, backend generation, streaming errors/tokens, and
+SQLAlchemy Unit of Work transaction spans. Telemetry remains disabled by
+default for imports and tests, while Compose enables API export to Phoenix via
+`MAC_LLM_OPS_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://phoenix:6006/v1/traces`.
+See `docs/observability.md`; Phoenix runtime receipt evidence is still pending.
 A standalone `vllm-mlx` smoke did pass with
 `mlx-community/Qwen3-0.6B-8bit` on port 8100, including model download,
 `/v1/models`, chat, streaming, and `/metrics`; evidence is saved under ignored
@@ -86,6 +92,8 @@ See `docs/runtime-stack.md` for the static-vs-runtime boundary before running
 any Docker services.
 See `docs/persistence.md` for the SQLAlchemy/Alembic persistence boundary and
 local PostgreSQL migration proof.
+See `docs/observability.md` for the OpenTelemetry/Phoenix configuration,
+prompt-safety contract, and pending runtime proof gate.
 
 For direct Python use:
 

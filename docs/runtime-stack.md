@@ -16,6 +16,8 @@ The repo currently has:
 - one model-backed project API smoke, where this repo's FastAPI app proxied to
   the native `vllm-mlx` server through the OpenAI-compatible backend adapter
 - one PostgreSQL migration and sample insert/read proof for persistence metadata
+- code-backed OpenTelemetry instrumentation for HTTP, scheduler, backend,
+  streaming, and SQLAlchemy Unit of Work spans
 
 The Apple Silicon backend is intentionally native and gated. It is not a
 Compose service yet. The API can be switched from the fake backend to a native
@@ -158,6 +160,33 @@ claims are not complete yet:
 
 `secrets/`, `model-cache/`, traces, logs, raw benchmarks, database files, and
 runtime artifacts must stay out of git.
+
+## OpenTelemetry And Phoenix
+
+The API now has manual OpenTelemetry instrumentation. The static tests prove
+bounded prompt-safe span attributes for request, scheduler, backend generation,
+streaming error/token, and database transaction paths. The Compose API service
+sets:
+
+```text
+MAC_LLM_OPS_OTEL_ENABLED=true
+MAC_LLM_OPS_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://phoenix:6006/v1/traces
+MAC_LLM_OPS_PHOENIX_PROJECT_NAME=mac-llm-ops-lab-local
+```
+
+For a host-run API against the locally mapped Phoenix UI port used in the first
+E2E run, use:
+
+```bash
+MAC_LLM_OPS_OTEL_ENABLED=true \
+MAC_LLM_OPS_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://127.0.0.1:16006/v1/traces \
+MAC_LLM_OPS_PHOENIX_PROJECT_NAME=mac-llm-ops-lab-local \
+uv run uvicorn mac_llm_ops_lab.cli:app --host 127.0.0.1 --port 8020
+```
+
+See `docs/observability.md` for the prompt-safety contract. Phoenix trace
+receipt is still pending until a saved runtime evidence bundle shows local
+Phoenix received the request/backend/token/error spans.
 
 ## Current Service Intent
 

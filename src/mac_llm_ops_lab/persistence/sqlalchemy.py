@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from contextlib import nullcontext
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import (
     JSON,
@@ -22,6 +24,11 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+from mac_llm_ops_lab.observability import (
+    NoopSpan,
+    Observability,
+    mark_span_error,
+)
 from mac_llm_ops_lab.persistence.domain import (
     ArtifactPointer,
     BenchmarkResult,
@@ -368,13 +375,36 @@ class SQLAlchemyArtifactPointerRepository:
 
 
 class SQLAlchemyUnitOfWork:
-    def __init__(self, session_factory: Callable[[], AsyncSession]) -> None:
+    def __init__(
+        self,
+        session_factory: Callable[[], AsyncSession],
+        *,
+        observability: Observability | None = None,
+        db_system: str = "postgresql",
+    ) -> None:
         self._session_factory = session_factory
+        self._observability = observability
+        self._db_system = db_system
+        self._span_context: Any = None
+        self._span = NoopSpan()
         self.committed = False
 
     async def __aenter__(self) -> SQLAlchemyUnitOfWork:
         self.session = self._session_factory()
         self.committed = False
+        self._span_context = (
+            self._observability.start_span(
+                "db.transaction",
+                attributes={
+                    "db.system.name": self._db_system,
+                    "db.operation.name": "transaction",
+                    "mac_llm_ops.db.uow": type(self).__name__,
+                },
+            )
+            if self._observability is not None
+            else nullcontext(NoopSpan())
+        )
+        self._span = self._span_context.__enter__()
         self.models = SQLAlchemyModelCatalogRepository(self.session)
         self.nodes = SQLAlchemyNodeInventoryRepository(self.session)
         self.runs = SQLAlchemyInferenceRunRepository(self.session)
@@ -383,17 +413,25 @@ class SQLAlchemyUnitOfWork:
         return self
 
     async def __aexit__(self, *args: object) -> None:
-        if not self.committed:
-            await self.rollback()
-        await self.session.close()
+        try:
+            if args and args[0] is not None:
+                mark_span_error(self._span, "db_transaction_failed")
+            if not self.committed:
+                await self.rollback()
+        finally:
+            await self.session.close()
+            if self._span_context is not None:
+                self._span_context.__exit__(*args)
 
     async def commit(self) -> None:
         await self.session.commit()
         self.committed = True
+        self._span.set_attribute("db.transaction.outcome", "commit")
 
     async def rollback(self) -> None:
         await self.session.rollback()
         self.committed = False
+        self._span.set_attribute("db.transaction.outcome", "rollback")
 
 
 def create_async_session_factory(
