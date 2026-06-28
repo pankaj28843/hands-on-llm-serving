@@ -32,7 +32,8 @@ artifact directory, and log path labels. Manifest paths must stay under
 `artifacts/runtime/`, logs must stay inside the artifact directory, and required
 runtime labels must be non-empty.
 Execution records combine the preflight report and evidence manifest, exposing
-the final execute/skip state while checking backend and model consistency.
+the final execute/skip state while checking schema versions, boolean decision
+shape, reason codes, and backend/model consistency.
 
 For direct Python use:
 

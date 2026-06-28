@@ -1,6 +1,8 @@
 from collections.abc import Mapping, Sequence
 from pathlib import PurePosixPath
 
+from mac_llm_ops_lab.runtime_guard import RUNTIME_PREFLIGHT_REPORT_SCHEMA_VERSION
+
 RUNTIME_EVIDENCE_MANIFEST_SCHEMA_VERSION = "runtime-evidence-manifest/v1"
 RUNTIME_EXECUTION_RECORD_SCHEMA_VERSION = "runtime-execution-record/v1"
 REQUIRED_HOST_LABELS = ("os", "chip", "memory_gib")
@@ -57,18 +59,56 @@ def build_runtime_execution_record(
     preflight_report: Mapping[str, object],
     evidence_manifest: Mapping[str, object],
 ) -> dict[str, object]:
+    _validate_schema_version(
+        preflight_report,
+        expected_schema_version=RUNTIME_PREFLIGHT_REPORT_SCHEMA_VERSION,
+        field_name="preflight_report",
+    )
+    _validate_schema_version(
+        evidence_manifest,
+        expected_schema_version=RUNTIME_EVIDENCE_MANIFEST_SCHEMA_VERSION,
+        field_name="evidence_manifest",
+    )
     _validate_preflight_manifest_consistency(
         preflight_report=preflight_report,
         evidence_manifest=evidence_manifest,
     )
-    decision = _mapping_field(preflight_report, "decision")
-    can_execute = bool(decision.get("allowed", False))
+    decision = _validated_preflight_decision(preflight_report)
     return {
         "schema_version": RUNTIME_EXECUTION_RECORD_SCHEMA_VERSION,
-        "can_execute": can_execute,
-        "reason_code": str(decision.get("reason_code", "")),
+        "can_execute": decision["allowed"],
+        "reason_code": decision["reason_code"],
         "preflight_report": dict(preflight_report),
         "evidence_manifest": dict(evidence_manifest),
+    }
+
+
+def _validate_schema_version(
+    source: Mapping[str, object],
+    *,
+    expected_schema_version: str,
+    field_name: str,
+) -> None:
+    if source.get("schema_version") != expected_schema_version:
+        raise ValueError(
+            f"{field_name} schema_version must be {expected_schema_version}",
+        )
+
+
+def _validated_preflight_decision(
+    preflight_report: Mapping[str, object],
+) -> dict[str, object]:
+    decision = _mapping_field(preflight_report, "decision")
+    allowed = decision.get("allowed")
+    if not isinstance(allowed, bool):
+        raise ValueError("decision.allowed must be a boolean")
+    reason_code = _validated_non_empty_string(
+        decision.get("reason_code"),
+        field_name="decision.reason_code",
+    )
+    return {
+        "allowed": allowed,
+        "reason_code": reason_code,
     }
 
 
@@ -98,8 +138,8 @@ def _mapping_field(
     return value
 
 
-def _validated_non_empty_string(value: str, *, field_name: str) -> str:
-    if not value.strip():
+def _validated_non_empty_string(value: object, *, field_name: str) -> str:
+    if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field_name} must be non-empty")
     return value
 

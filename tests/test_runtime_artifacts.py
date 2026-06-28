@@ -184,3 +184,74 @@ def test_runtime_execution_record_rejects_backend_or_model_mismatch() -> None:
             preflight_report=preflight_report,
             evidence_manifest=manifest,
         )
+
+
+def test_runtime_execution_record_rejects_malformed_payload_shape() -> None:
+    preflight_report = build_runtime_preflight_report(
+        RuntimePreflightPlan(
+            backend_id="fake-batched-backend",
+            model_id="fake-local-model",
+            explicitly_authorized=True,
+            model_weights_gib=1.0,
+            kv_cache_gib=1.0,
+            runtime_overhead_gib=1.0,
+            service_overhead_gib=1.0,
+        )
+    )
+    manifest = build_runtime_evidence_manifest(
+        git_sha="bce02cc",
+        command=("uv", "run", "python", "-m", "mac_llm_ops_lab.cli"),
+        artifact_dir="artifacts/runtime/bce02cc-fake-smoke",
+        log_path="artifacts/runtime/bce02cc-fake-smoke/service.log",
+        host={"os": "macOS", "chip": "Apple Silicon", "memory_gib": 24},
+        backend_id="fake-batched-backend",
+        model_id="fake-local-model",
+        runtime_config={"quantization": "none"},
+        ports={"api": 8000},
+    )
+
+    malformed_preflight_schema = {
+        **preflight_report,
+        "schema_version": "runtime-preflight/v0",
+    }
+    with pytest.raises(ValueError, match="preflight_report schema_version"):
+        build_runtime_execution_record(
+            preflight_report=malformed_preflight_schema,
+            evidence_manifest=manifest,
+        )
+
+    malformed_manifest_schema = {
+        **manifest,
+        "schema_version": "runtime-evidence-manifest/v0",
+    }
+    with pytest.raises(ValueError, match="evidence_manifest schema_version"):
+        build_runtime_execution_record(
+            preflight_report=preflight_report,
+            evidence_manifest=malformed_manifest_schema,
+        )
+
+    non_boolean_decision = {
+        **preflight_report,
+        "decision": {
+            **preflight_report["decision"],
+            "allowed": "yes",
+        },
+    }
+    with pytest.raises(ValueError, match="decision.allowed"):
+        build_runtime_execution_record(
+            preflight_report=non_boolean_decision,
+            evidence_manifest=manifest,
+        )
+
+    empty_reason_code = {
+        **preflight_report,
+        "decision": {
+            **preflight_report["decision"],
+            "reason_code": "",
+        },
+    }
+    with pytest.raises(ValueError, match="decision.reason_code"):
+        build_runtime_execution_record(
+            preflight_report=empty_reason_code,
+            evidence_manifest=manifest,
+        )
