@@ -19,6 +19,11 @@ It builds the FastAPI app with `FakeBatchedBackend`. Importing this target does
 not download models, start Docker, connect to PostgreSQL, emit Phoenix traces,
 or require Open WebUI or Mac Studio cluster services.
 
+Future real-model runtime checks must pass the CPU-safe preflight guard in
+`mac_llm_ops_lab.runtime_guard` first. The guard requires explicit
+authorization and skips plans whose estimated model weights, KV cache, runtime
+overhead, and service overhead exceed the configured memory ceiling.
+
 For direct Python use:
 
 ```bash
