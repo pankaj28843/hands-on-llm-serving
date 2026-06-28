@@ -81,6 +81,7 @@ def create_app(*, backend: ModelBackend, settings: Settings | None = None) -> Fa
                 "http_method": request.method,
                 "http_route": route,
                 "http_status_code": response.status_code,
+                "http_duration_ms": duration_ms,
             },
         )
         return response

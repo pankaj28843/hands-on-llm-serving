@@ -339,6 +339,7 @@ def test_http_request_log_uses_bounded_fields_without_prompt_text(caplog) -> Non
     assert record.http_method == "POST"
     assert record.http_route == "/v1/chat/completions"
     assert record.http_status_code == 200
+    assert record.http_duration_ms >= 0
     assert "secret prompt" not in caplog.text
 
 
