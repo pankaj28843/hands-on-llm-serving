@@ -18,12 +18,16 @@ The repo currently has:
 - one PostgreSQL migration and sample insert/read proof for persistence metadata
 - code-backed OpenTelemetry instrumentation for HTTP, scheduler, backend,
   streaming, and SQLAlchemy Unit of Work spans
+- one Phoenix trace export proof for API success, streaming, backend error, and
+  database transaction spans
+- one Open WebUI workflow proof where the UI discovered `fake-local-model`,
+  submitted chat, and rendered a fake-backend response through the Compose API
 
 The Apple Silicon backend is intentionally native and gated. It is not a
 Compose service yet. The API can be switched from the fake backend to a native
 host OpenAI-compatible backend with `MAC_LLM_OPS_BACKEND_KIND=openai-compatible`. The
-first candidate is `vllm-mlx`, but it still needs cancellation, Phoenix trace,
-and benchmark gates before the backend slice is complete.
+first candidate is `vllm-mlx`, but it still needs cancellation, real-backend
+Phoenix trace, and benchmark gates before the backend slice is complete.
 
 ## Safe Static Checks
 
@@ -143,8 +147,35 @@ It includes project API `GET /live`, `GET /ready`, `GET /v1/models`,
 non-streaming `POST /v1/chat/completions`, streaming
 `POST /v1/chat/completions`, project API `GET /metrics/snapshot`, and the
 backend `/metrics` head. The API adapter path is now code-backed and tested;
-Open WebUI workflow, Phoenix trace export, cancellation, and benchmark proof
-remain separate gates.
+Open WebUI against the real backend, real-backend Phoenix trace, cancellation,
+and benchmark proof remain separate gates.
+
+## Open WebUI Workflow Proof
+
+Open WebUI is configured as an OpenAI-compatible frontend for this repo's API.
+The Compose profile uses:
+
+```text
+OPENAI_API_BASE_URLS=http://api:8000/v1
+OPENAI_API_KEYS=local-dev-placeholder
+WEBUI_AUTH=False
+ENABLE_PERSISTENT_CONFIG=False
+ENABLE_OLLAMA_API=False
+```
+
+The saved evidence bundle is under:
+
+```text
+artifacts/runtime/2026-06-28T163030+0200-open-webui/
+```
+
+The proof includes rebuilt API image output, recreated healthy Open WebUI
+container state, direct API probes for `/v1/models`, chat, streaming, and
+metrics, headed-CDP browser evidence showing `fake-local-model`, redacted
+network evidence for `POST /api/chat/completions` through Open WebUI, project
+API logs showing Open WebUI's container calling `GET /v1/models` and
+`POST /v1/chat/completions`, and a clean publish-safety scan over the saved
+evidence.
 
 ## Still Not Complete
 
@@ -152,10 +183,8 @@ The local E2E proof is intentionally narrower than production readiness. These
 claims are not complete yet:
 
 - production secret management beyond the ignored local placeholder file
-- Phoenix OpenTelemetry trace export proof
-- Open WebUI model listing and chat smoke proof through its UI/API workflow
-- model-cache policy under ignored `model-cache/`
-- runtime artifacts under ignored `artifacts/runtime/`
+- production model-cache policy beyond ignored `model-cache/`
+- production runtime-artifact retention policy beyond ignored `artifacts/runtime/`
 - cancellation, benchmark, and Phoenix trace proof for the real backend
 
 `secrets/`, `model-cache/`, traces, logs, raw benchmarks, database files, and
@@ -184,9 +213,10 @@ MAC_LLM_OPS_PHOENIX_PROJECT_NAME=mac-llm-ops-lab-local \
 uv run uvicorn mac_llm_ops_lab.cli:app --host 127.0.0.1 --port 8020
 ```
 
-See `docs/observability.md` for the prompt-safety contract. Phoenix trace
-receipt is still pending until a saved runtime evidence bundle shows local
-Phoenix received the request/backend/token/error spans.
+Saved proof under `artifacts/runtime/2026-06-28T160713+0200-phoenix-otel/`
+shows local Phoenix received prompt-safe HTTP, scheduler, backend, streaming
+token/error, and database transaction spans. See `docs/observability.md` for
+the prompt-safety contract and the evidence requirements for future runs.
 
 ## Current Service Intent
 

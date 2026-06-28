@@ -59,6 +59,7 @@ def test_local_runtime_stack_plan_declares_real_services_without_side_effects() 
     assert open_webui["ports"] == {"ui": 3000, "container": 8080}
     assert open_webui["environment"] == {
         "ENABLE_PERSISTENT_CONFIG": "False",
+        "ENABLE_OLLAMA_API": "False",
         "OPENAI_API_BASE_URLS": "http://host.docker.internal:8000/v1",
         "OPENAI_API_KEYS": "local-dev-placeholder",
         "WEBUI_AUTH": "False",

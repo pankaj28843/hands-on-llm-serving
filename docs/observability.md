@@ -82,5 +82,8 @@ Runtime proof must save a publish-safe artifact bundle under
 - a text check proving raw prompts, completions, secrets, and machine-local
   paths are absent from saved trace artifacts
 
-Do not claim the Phoenix slice complete until a local Phoenix instance receives
-these traces.
+Current saved proof exists under
+`artifacts/runtime/2026-06-28T160713+0200-phoenix-otel/`. That bundle shows
+Phoenix trace receipt for HTTP, scheduler, backend generation, streaming token
+and error, and `db.transaction` spans, plus a publish-safety grep over saved
+trace artifacts.

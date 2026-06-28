@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Mapping
 
 from fastapi.testclient import TestClient
 
@@ -36,16 +36,28 @@ class FakeBackend:
     async def ready(self) -> bool:
         return self.ready_after_load and self.loaded == 1 and self.closed == 0
 
-    async def list_models(self) -> list[dict[str, str]]:
+    async def list_models(self) -> list[dict[str, object]]:
         return [{"id": "fake-local-model", "object": "model"}]
 
-    async def generate(self, prompt: str, model: str) -> str:
+    async def generate(
+        self,
+        prompt: str,
+        model: str,
+        *,
+        options: Mapping[str, object] | None = None,
+    ) -> str:
         if self.generation_error is not None:
             raise self.generation_error
         self.generated_prompts.append(f"{model}:{prompt}")
         return f"fake response to {prompt}"
 
-    async def stream(self, prompt: str, model: str) -> AsyncIterator[str]:
+    async def stream(
+        self,
+        prompt: str,
+        model: str,
+        *,
+        options: Mapping[str, object] | None = None,
+    ) -> AsyncIterator[str]:
         self.generated_prompts.append(f"{model}:{prompt}")
         try:
             yield "fake "
@@ -79,7 +91,12 @@ def test_app_constructs_with_fake_backend_and_no_external_services() -> None:
     assert ready_response.json() == {"status": "ready"}
     assert models_response.status_code == 200
     assert models_response.json()["data"] == [
-        {"id": "fake-local-model", "object": "model"}
+        {
+            "id": "fake-local-model",
+            "object": "model",
+            "created": 0,
+            "owned_by": "mac-llm-ops-lab",
+        }
     ]
     assert generation_response.status_code == 200
     assert generation_response.json()["choices"][0]["message"] == {

@@ -112,6 +112,7 @@ def _open_webui_service() -> dict[str, object]:
         "ports": {"ui": 3000, "container": 8080},
         "environment": {
             "ENABLE_PERSISTENT_CONFIG": "False",
+            "ENABLE_OLLAMA_API": "False",
             "OPENAI_API_BASE_URLS": "http://host.docker.internal:8000/v1",
             "OPENAI_API_KEYS": "local-dev-placeholder",
             "WEBUI_AUTH": "False",

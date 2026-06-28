@@ -25,7 +25,12 @@ def test_cli_build_app_uses_fake_backend_without_external_services() -> None:
     assert ready_response.json() == {"status": "ready"}
     assert models_response.status_code == 200
     assert models_response.json()["data"] == [
-        {"id": "fake-local-model", "object": "model"}
+        {
+            "id": "fake-local-model",
+            "object": "model",
+            "created": 0,
+            "owned_by": "mac-llm-ops-lab",
+        }
     ]
     assert generation_response.status_code == 200
     assert generation_response.json()["choices"][0]["message"]["content"] == (
@@ -44,7 +49,12 @@ def test_cli_module_exports_fake_backend_asgi_app_without_external_services() ->
     assert ready_response.json() == {"status": "ready"}
     assert models_response.status_code == 200
     assert models_response.json()["data"] == [
-        {"id": "fake-local-model", "object": "model"}
+        {
+            "id": "fake-local-model",
+            "object": "model",
+            "created": 0,
+            "owned_by": "mac-llm-ops-lab",
+        }
     ]
 
 

@@ -67,6 +67,7 @@ def test_compose_yaml_is_valid_and_keeps_real_backend_native_gated() -> None:
     open_webui = services["open-webui"]
     assert open_webui["image"] == "ghcr.io/open-webui/open-webui:main"
     assert open_webui["environment"]["OPENAI_API_BASE_URLS"] == ("http://api:8000/v1")
+    assert open_webui["environment"]["ENABLE_OLLAMA_API"] == "False"
 
 
 def test_local_secret_files_stay_out_of_git() -> None:

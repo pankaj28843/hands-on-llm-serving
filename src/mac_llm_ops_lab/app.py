@@ -1,7 +1,7 @@
 import json
 import logging
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Mapping
 from contextlib import asynccontextmanager, nullcontext
 from typing import Protocol
 from uuid import uuid4
@@ -10,7 +10,7 @@ from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, StreamingResponse
 from opentelemetry.trace import SpanKind
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from mac_llm_ops_lab.config import Settings, load_settings
 from mac_llm_ops_lab.metrics import InMemoryMetrics
@@ -23,6 +23,7 @@ from mac_llm_ops_lab.observability import (
 )
 
 HTTP_LOGGER = logging.getLogger("mac_llm_ops_lab.http")
+GenerationOptions = Mapping[str, object]
 
 
 class ModelBackend(Protocol):
@@ -32,11 +33,23 @@ class ModelBackend(Protocol):
 
     async def ready(self) -> bool: ...
 
-    async def list_models(self) -> list[dict[str, str]]: ...
+    async def list_models(self) -> list[dict[str, object]]: ...
 
-    async def generate(self, prompt: str, model: str) -> str: ...
+    async def generate(
+        self,
+        prompt: str,
+        model: str,
+        *,
+        options: GenerationOptions | None = None,
+    ) -> str: ...
 
-    async def stream(self, prompt: str, model: str) -> AsyncIterator[str]: ...
+    async def stream(
+        self,
+        prompt: str,
+        model: str,
+        *,
+        options: GenerationOptions | None = None,
+    ) -> AsyncIterator[str]: ...
 
 
 class ChatMessage(BaseModel):
@@ -44,10 +57,27 @@ class ChatMessage(BaseModel):
     content: str
 
 
+class ChatCompletionStreamOptions(BaseModel):
+    include_usage: bool | None = None
+
+
 class ChatCompletionRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     model: str
     messages: list[ChatMessage] = Field(min_length=1)
     stream: bool = False
+    temperature: float | None = None
+    top_p: float | None = None
+    max_tokens: int | None = None
+    max_completion_tokens: int | None = None
+    stop: str | list[str] | None = None
+    seed: int | None = None
+    logit_bias: dict[str, float] | None = None
+    user: str | None = None
+    tools: list[dict[str, object]] | None = None
+    tool_choice: str | dict[str, object] | None = None
+    stream_options: ChatCompletionStreamOptions | None = None
 
 
 def create_app(
@@ -206,12 +236,14 @@ def create_app(
         request.state.model_id = payload.model
         _ensure_model_allowed(payload.model, settings=app_settings)
         prompt = _last_user_message(payload.messages)
+        generation_options = _generation_options(payload)
         if payload.stream:
             return StreamingResponse(
                 _stream_events(
                     active_backend,
                     prompt=prompt,
                     model=payload.model,
+                    options=generation_options,
                     metrics=metrics,
                     observability=app_observability,
                     request_id=getattr(request.state, "request_id", ""),
@@ -241,7 +273,11 @@ def create_app(
                 attributes=backend_attributes,
             ) as backend_span:
                 try:
-                    content = await active_backend.generate(prompt, payload.model)
+                    content = await active_backend.generate(
+                        prompt,
+                        payload.model,
+                        options=generation_options,
+                    )
                 except Exception as exc:
                     metrics.record_backend_generation_error(
                         model=payload.model,
@@ -262,7 +298,11 @@ def create_app(
                 backend_span.set_attribute("gen_ai.response.model", payload.model)
                 backend_span.set_attribute("gen_ai.response.finish_reasons", ("stop",))
         metrics.record_generated_text(model=payload.model, content=content)
-        return _completion_response(model=payload.model, content=content)
+        return _completion_response(
+            model=payload.model,
+            prompt=prompt,
+            content=content,
+        )
 
     return app
 
@@ -275,12 +315,30 @@ def _last_user_message(messages: list[ChatMessage]) -> str:
 
 
 def _filter_allowed_models(
-    models: list[dict[str, str]], *, settings: Settings
-) -> list[dict[str, str]]:
+    models: list[dict[str, object]], *, settings: Settings
+) -> list[dict[str, object]]:
     if not settings.model_allowlist:
-        return models
+        return [_model_response(model) for model in models]
     allowed = set(settings.model_allowlist)
-    return [model for model in models if model.get("id") in allowed]
+    return [
+        _model_response(model)
+        for model in models
+        if isinstance(model.get("id"), str) and model["id"] in allowed
+    ]
+
+
+def _model_response(model: Mapping[str, object]) -> dict[str, object]:
+    model_id = model.get("id")
+    model_object = model.get("object", "model")
+    created = model.get("created", 0)
+    owned_by = model.get("owned_by", "mac-llm-ops-lab")
+    return {
+        **dict(model),
+        "id": model_id if isinstance(model_id, str) else "",
+        "object": model_object if isinstance(model_object, str) else "model",
+        "created": created if isinstance(created, int) else 0,
+        "owned_by": owned_by if isinstance(owned_by, str) else "mac-llm-ops-lab",
+    }
 
 
 def _ensure_model_allowed(model: str, *, settings: Settings) -> None:
@@ -295,7 +353,9 @@ def _ensure_model_allowed(model: str, *, settings: Settings) -> None:
     )
 
 
-def _completion_response(*, model: str, content: str) -> dict[str, object]:
+def _completion_response(*, model: str, prompt: str, content: str) -> dict[str, object]:
+    prompt_tokens = safe_token_count(prompt)
+    completion_tokens = safe_token_count(content)
     return {
         "id": f"chatcmpl-{uuid4().hex}",
         "object": "chat.completion",
@@ -308,6 +368,11 @@ def _completion_response(*, model: str, content: str) -> dict[str, object]:
                 "finish_reason": "stop",
             }
         ],
+        "usage": {
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": prompt_tokens + completion_tokens,
+        },
     }
 
 
@@ -360,6 +425,7 @@ async def _stream_events(
     *,
     prompt: str,
     model: str,
+    options: GenerationOptions | None = None,
     metrics: InMemoryMetrics | None = None,
     observability: Observability | None = None,
     request_id: str = "",
@@ -400,7 +466,7 @@ async def _stream_events(
             )
             output_tokens = 0
             try:
-                async for chunk in backend.stream(prompt, model):
+                async for chunk in backend.stream(prompt, model, options=options):
                     output_tokens += safe_token_count(chunk)
                     yield _sse_event(
                         model=model,
@@ -480,3 +546,27 @@ def _backend_span_attributes(
         "gen_ai.request.model": model,
         "gen_ai.usage.input_tokens": safe_token_count(prompt),
     }
+
+
+def _generation_options(payload: ChatCompletionRequest) -> dict[str, object]:
+    options: dict[str, object] = {}
+    for name in (
+        "temperature",
+        "top_p",
+        "max_tokens",
+        "max_completion_tokens",
+        "stop",
+        "seed",
+        "logit_bias",
+        "user",
+        "tools",
+        "tool_choice",
+    ):
+        value = getattr(payload, name)
+        if value is not None:
+            options[name] = value
+    if payload.stream_options is not None:
+        stream_options = payload.stream_options.model_dump(exclude_none=True)
+        if stream_options:
+            options["stream_options"] = stream_options
+    return options

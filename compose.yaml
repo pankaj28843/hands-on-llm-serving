@@ -61,6 +61,7 @@ services:
         condition: service_started
     environment:
       ENABLE_PERSISTENT_CONFIG: "False"
+      ENABLE_OLLAMA_API: "False"
       OPENAI_API_BASE_URLS: http://api:8000/v1
       OPENAI_API_KEYS: local-dev-placeholder
       WEBUI_AUTH: "False"

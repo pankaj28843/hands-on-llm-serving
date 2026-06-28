@@ -1,5 +1,5 @@
 import json
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Mapping
 
 import pytest
 from fastapi.testclient import TestClient
@@ -36,15 +36,27 @@ class FakeBackend:
     async def ready(self) -> bool:
         return True
 
-    async def list_models(self) -> list[dict[str, str]]:
+    async def list_models(self) -> list[dict[str, object]]:
         return [{"id": "fake-local-model", "object": "model"}]
 
-    async def generate(self, prompt: str, model: str) -> str:
+    async def generate(
+        self,
+        prompt: str,
+        model: str,
+        *,
+        options: Mapping[str, object] | None = None,
+    ) -> str:
         if self.generation_error is not None:
             raise self.generation_error
         return f"fake response to {prompt}"
 
-    async def stream(self, prompt: str, model: str) -> AsyncIterator[str]:
+    async def stream(
+        self,
+        prompt: str,
+        model: str,
+        *,
+        options: Mapping[str, object] | None = None,
+    ) -> AsyncIterator[str]:
         yield "fake "
         if self.stream_error is not None:
             raise self.stream_error

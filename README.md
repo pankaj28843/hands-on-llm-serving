@@ -52,9 +52,9 @@ Phoenix and Open WebUI were reachable, with Phoenix exposed on
 Evidence is saved under the ignored
 `artifacts/runtime/2026-06-28T145945+0200-e2e/` bundle.
 
-This is not yet full production proof: Phoenix trace export, Open WebUI chat
-workflow integration, cancellation, benchmarks, MkDocs, cluster routing, and
-release/no-leak checks are still pending. PostgreSQL persistence now has
+This is not yet full production proof: real-backend cancellation/benchmarks,
+MkDocs, cluster routing, and release/no-leak checks are still pending.
+PostgreSQL persistence now has
 SQLAlchemy/Alembic code and a local migration plus sample insert/read proof
 under ignored `artifacts/runtime/2026-06-28T154545+0200-postgres-persistence/`.
 OpenTelemetry instrumentation is now code-backed for HTTP request spans,
@@ -62,7 +62,9 @@ scheduler dispatch, backend generation, streaming errors/tokens, and
 SQLAlchemy Unit of Work transaction spans. Telemetry remains disabled by
 default for imports and tests, while Compose enables API export to Phoenix via
 `MAC_LLM_OPS_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://phoenix:6006/v1/traces`.
-See `docs/observability.md`; Phoenix runtime receipt evidence is still pending.
+Phoenix receipt evidence is saved under ignored
+`artifacts/runtime/2026-06-28T160713+0200-phoenix-otel/`; see
+`docs/observability.md`.
 A standalone `vllm-mlx` smoke did pass with
 `mlx-community/Qwen3-0.6B-8bit` on port 8100, including model download,
 `/v1/models`, chat, streaming, and `/metrics`; evidence is saved under ignored
@@ -88,12 +90,23 @@ That model-backed app/API path was probed through this repo's `/live`,
 `artifacts/runtime/2026-06-28T153000+0200-model-backed-api-e2e/`. Local secret
 files belong under ignored `secrets/` paths and must not be committed.
 
+Open WebUI workflow integration is now code-backed and runtime-proven against
+the Docker Compose fake-backend stack. The API accepts Open WebUI-style
+generation parameters, returns discoverable model records and non-streaming
+usage, and forwards generation options to native OpenAI-compatible backends.
+Open WebUI was recreated with `ENABLE_OLLAMA_API=False`, showed
+`fake-local-model`, submitted a browser chat, and rendered the fake-backend
+response. Evidence is saved under ignored
+`artifacts/runtime/2026-06-28T163030+0200-open-webui/`.
+
 See `docs/runtime-stack.md` for the static-vs-runtime boundary before running
 any Docker services.
 See `docs/persistence.md` for the SQLAlchemy/Alembic persistence boundary and
 local PostgreSQL migration proof.
 See `docs/observability.md` for the OpenTelemetry/Phoenix configuration,
-prompt-safety contract, and pending runtime proof gate.
+prompt-safety contract, and runtime proof gate.
+See `docs/open-webui.md` for Open WebUI connection settings and workflow proof
+requirements.
 
 For direct Python use:
 

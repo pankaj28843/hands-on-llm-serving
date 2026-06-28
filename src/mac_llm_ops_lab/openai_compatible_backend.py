@@ -1,5 +1,5 @@
 import json
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Mapping
 from typing import Any
 
 import httpx
@@ -41,7 +41,7 @@ class OpenAICompatibleBackend:
             return False
         return isinstance(data, list)
 
-    async def list_models(self) -> list[dict[str, str]]:
+    async def list_models(self) -> list[dict[str, object]]:
         response = await self._client.get(self._url("/models"), headers=self._headers())
         response.raise_for_status()
         models = response.json().get("data", [])
@@ -49,29 +49,43 @@ class OpenAICompatibleBackend:
             return []
         return [_normalize_model(model) for model in models if isinstance(model, dict)]
 
-    async def generate(self, prompt: str, model: str) -> str:
+    async def generate(
+        self,
+        prompt: str,
+        model: str,
+        *,
+        options: Mapping[str, object] | None = None,
+    ) -> str:
         response = await self._client.post(
             self._url("/chat/completions"),
             headers=self._headers(),
-            json={
-                "model": model,
-                "messages": [{"role": "user", "content": prompt}],
-                "stream": False,
-            },
+            json=_chat_completion_payload(
+                prompt=prompt,
+                model=model,
+                stream=False,
+                options=options,
+            ),
         )
         response.raise_for_status()
         return _extract_completion_content(response.json())
 
-    async def stream(self, prompt: str, model: str) -> AsyncIterator[str]:
+    async def stream(
+        self,
+        prompt: str,
+        model: str,
+        *,
+        options: Mapping[str, object] | None = None,
+    ) -> AsyncIterator[str]:
         async with self._client.stream(
             "POST",
             self._url("/chat/completions"),
             headers=self._headers(),
-            json={
-                "model": model,
-                "messages": [{"role": "user", "content": prompt}],
-                "stream": True,
-            },
+            json=_chat_completion_payload(
+                prompt=prompt,
+                model=model,
+                stream=True,
+                options=options,
+            ),
         ) as response:
             response.raise_for_status()
             async for line in response.aiter_lines():
@@ -88,7 +102,24 @@ class OpenAICompatibleBackend:
         return {"Authorization": f"Bearer {self.api_key}"}
 
 
-def _normalize_model(model: dict[str, Any]) -> dict[str, str]:
+def _chat_completion_payload(
+    *,
+    prompt: str,
+    model: str,
+    stream: bool,
+    options: Mapping[str, object] | None,
+) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "stream": stream,
+    }
+    if options:
+        payload.update(dict(options))
+    return payload
+
+
+def _normalize_model(model: dict[str, Any]) -> dict[str, object]:
     model_id = model.get("id")
     model_object = model.get("object", "model")
     return {

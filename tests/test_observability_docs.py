@@ -17,6 +17,7 @@ def test_observability_docs_describe_phoenix_and_prompt_safety() -> None:
         "gen_ai.usage.output_tokens",
         "db.transaction.outcome",
         "does not capture prompts",
-        "Do not claim the Phoenix slice complete",
+        "artifacts/runtime/2026-06-28T160713+0200-phoenix-otel/",
+        "Phoenix trace receipt",
     ):
         assert required in text

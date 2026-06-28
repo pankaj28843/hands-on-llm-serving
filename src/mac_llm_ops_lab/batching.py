@@ -1,4 +1,4 @@
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Mapping
 from dataclasses import dataclass, field
 
 
@@ -42,17 +42,29 @@ class FakeBatchedBackend:
     async def ready(self) -> bool:
         return self.loaded and not self.closed
 
-    async def list_models(self) -> list[dict[str, str]]:
+    async def list_models(self) -> list[dict[str, object]]:
         return [{"id": self.model_id, "object": "model"}]
 
-    async def generate(self, prompt: str, model: str) -> str:
+    async def generate(
+        self,
+        prompt: str,
+        model: str,
+        *,
+        options: Mapping[str, object] | None = None,
+    ) -> str:
         responses = await self.generate_many(
             [GenerationRequest(model=model, prompt=prompt)]
         )
         return responses[0]
 
-    async def stream(self, prompt: str, model: str) -> AsyncIterator[str]:
-        yield await self.generate(prompt, model)
+    async def stream(
+        self,
+        prompt: str,
+        model: str,
+        *,
+        options: Mapping[str, object] | None = None,
+    ) -> AsyncIterator[str]:
+        yield await self.generate(prompt, model, options=options)
 
     async def generate_many(self, requests: list[GenerationRequest]) -> list[str]:
         if not self.loaded or self.closed:
