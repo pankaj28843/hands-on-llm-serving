@@ -52,6 +52,9 @@ proof: PostgreSQL migrations, Phoenix trace export, Open WebUI smoke evidence,
 and real-model backend proof are still pending. Local secret files belong under
 ignored `secrets/` paths and must not be committed.
 
+See `docs/runtime-stack.md` for the static-vs-runtime boundary before running
+any Docker services.
+
 For direct Python use:
 
 ```bash
