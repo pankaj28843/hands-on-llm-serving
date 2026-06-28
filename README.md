@@ -43,14 +43,20 @@ validated artifact directory. The bundle index can also be persisted as sorted
 JSON beside the execution record.
 
 `mac_llm_ops_lab.runtime_stack.build_local_runtime_stack_plan()` exposes a
-static macOS-local topology for the next runtime work. It declares the API,
-PostgreSQL, Phoenix, Open WebUI, and a gated native Apple Silicon backend path
-without starting containers, requiring secrets, or downloading models. This is
-now mirrored by `compose.yaml`, which can be statically validated with
-`docker compose config --format json`. The Compose file is not yet runtime
-proof: PostgreSQL migrations, Phoenix trace export, Open WebUI smoke evidence,
-and real-model backend proof are still pending. Local secret files belong under
-ignored `secrets/` paths and must not be committed.
+macOS-local topology for API, PostgreSQL, Phoenix, Open WebUI, and a gated
+native Apple Silicon backend path. The Docker-built fake-backend API stack has
+now been run locally with Compose and probed through `/live`, `/ready`,
+`/v1/models`, non-streaming chat, streaming chat, and `/metrics/snapshot`.
+Phoenix and Open WebUI were reachable, with Phoenix exposed on
+`PHOENIX_HOST_PORT=16006` because another local container owned port 6006.
+Evidence is saved under the ignored
+`artifacts/runtime/2026-06-28T145945+0200-e2e/` bundle.
+
+This is not yet full production proof: PostgreSQL migrations/persistence,
+Phoenix trace export, Open WebUI chat workflow integration, real-model Apple
+Silicon backend proof, MkDocs, cluster routing, and release/no-leak checks are
+still pending. Local secret files belong under ignored `secrets/` paths and
+must not be committed.
 
 See `docs/runtime-stack.md` for the static-vs-runtime boundary before running
 any Docker services.

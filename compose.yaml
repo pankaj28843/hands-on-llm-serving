@@ -13,7 +13,7 @@ services:
       timeout: 5s
       retries: 5
     ports:
-      - "5432:5432"
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
     secrets:
       - source: postgres_password
         target: postgres_password
@@ -28,9 +28,9 @@ services:
     environment:
       PHOENIX_SQL_DATABASE_URL: postgresql://llm_serving:${POSTGRES_PASSWORD:-local-placeholder}@postgres:5432/llm_serving
     ports:
-      - "6006:6006"
-      - "4317:4317"
-      - "9090:9090"
+      - "${PHOENIX_HOST_PORT:-6006}:6006"
+      - "${OTLP_GRPC_HOST_PORT:-4317}:4317"
+      - "${PHOENIX_PROMETHEUS_HOST_PORT:-9090}:9090"
 
   api:
     build:
@@ -45,7 +45,7 @@ services:
       DATABASE_URL: postgresql://llm_serving:${POSTGRES_PASSWORD:-local-placeholder}@postgres:5432/llm_serving
       PHOENIX_COLLECTOR_ENDPOINT: http://phoenix:6006/v1/traces
     ports:
-      - "8000:8000"
+      - "${API_HOST_PORT:-8000}:8000"
 
   open-webui:
     image: ghcr.io/open-webui/open-webui:main
@@ -58,7 +58,7 @@ services:
       OPENAI_API_KEYS: local-dev-placeholder
       WEBUI_AUTH: "False"
     ports:
-      - "3000:8080"
+      - "${OPEN_WEBUI_HOST_PORT:-3000}:8080"
     volumes:
       - open-webui-data:/app/backend/data
 

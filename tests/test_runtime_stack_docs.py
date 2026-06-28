@@ -9,13 +9,17 @@ def test_runtime_stack_docs_define_static_and_runtime_boundaries() -> None:
 
     for required in (
         "docker compose config",
-        "docker compose up",
-        "Do not run",
-        "secrets/",
-        "model-cache/",
+        "PHOENIX_HOST_PORT=16006 docker compose up -d --build",
+        "artifacts/runtime/2026-06-28T145945+0200-e2e/",
+        "/live",
+        "/ready",
+        "/v1/models",
         "PostgreSQL",
         "Phoenix",
         "Open WebUI",
         "Apple Silicon backend",
+        "not complete",
     ):
         assert required in text
+
+    assert "Do not run `docker compose up` yet" not in text

@@ -63,3 +63,14 @@ def test_local_secret_files_stay_out_of_git() -> None:
         for line in gitignore_text.splitlines()
         if line.strip() and not line.lstrip().startswith("#")
     }
+
+
+def test_compose_host_ports_are_overridable_for_local_collisions() -> None:
+    compose_text = Path("compose.yaml").read_text(encoding="utf-8")
+
+    assert "${POSTGRES_HOST_PORT:-5432}:5432" in compose_text
+    assert "${PHOENIX_HOST_PORT:-6006}:6006" in compose_text
+    assert "${OTLP_GRPC_HOST_PORT:-4317}:4317" in compose_text
+    assert "${PHOENIX_PROMETHEUS_HOST_PORT:-9090}:9090" in compose_text
+    assert "${API_HOST_PORT:-8000}:8000" in compose_text
+    assert "${OPEN_WEBUI_HOST_PORT:-3000}:8080" in compose_text
