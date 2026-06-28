@@ -117,6 +117,22 @@ def test_learning_docs_cover_clone_and_run_path_without_private_paths() -> None:
         assert forbidden not in public_learning_docs
 
 
+def test_readme_points_to_current_native_openwebui_answer_proof() -> None:
+    readme = _read("README.md")
+
+    for required in (
+        "VLLM_MLX_MAX_TOKENS=512",
+        "VLLM_MLX_MAX_REQUEST_TOKENS=1024",
+        "VLLM_MLX_REASONING_PARSER=qwen3",
+        "VLLM_MLX_DEFAULT_CHAT_TEMPLATE_KWARGS='{\"enable_thinking\": false}'",
+        "artifacts/runtime/2026-06-28T195945+0200-open-webui-visible-answer-no-think/",
+        "visible assistant answer",
+    ):
+        assert required in readme
+
+    assert "limited visible answer text" not in readme
+
+
 def test_mkdocs_is_declared_as_dev_dependency() -> None:
     pyproject = _read("pyproject.toml")
 

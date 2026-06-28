@@ -82,6 +82,10 @@ The project API can now proxy to that native OpenAI-compatible backend:
 ```bash
 MODEL_ID=mlx-community/Qwen3-0.6B-8bit \
 VLLM_MLX_PORT=28100 \
+VLLM_MLX_MAX_TOKENS=512 \
+VLLM_MLX_MAX_REQUEST_TOKENS=1024 \
+VLLM_MLX_REASONING_PARSER=qwen3 \
+VLLM_MLX_DEFAULT_CHAT_TEMPLATE_KWARGS='{"enable_thinking": false}' \
 scripts/run-vllm-mlx-backend.sh
 ```
 
@@ -113,9 +117,12 @@ API path: a separate container on `127.0.0.1:23001` targeted
 `mlx-community/Qwen3-0.6B-8bit`, submitted chat, and produced project API,
 backend, metrics, and Phoenix evidence. That evidence is saved under ignored
 `artifacts/runtime/2026-06-28T174936+0200-open-webui-native-backend/`.
-The native proof includes caveats for one Open WebUI background-generation 502
-and the 64-token Qwen3 smoke's limited visible answer text; it is connectivity
-and trace proof, not a production UX/performance benchmark.
+The first native proof exposed a 64-token Qwen3 visible-answer failure; that is
+now fixed. The corrected path streams non-empty `delta.content` chunks to
+Open WebUI and renders a visible assistant answer/code block. Evidence is saved
+under ignored
+`artifacts/runtime/2026-06-28T195945+0200-open-webui-visible-answer-no-think/`.
+The native proofs are still not production UX or performance benchmarks.
 
 See `docs/runtime-stack.md` for the static-vs-runtime boundary before running
 any Docker services.
