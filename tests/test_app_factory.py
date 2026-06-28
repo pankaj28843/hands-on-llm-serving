@@ -7,8 +7,14 @@ from mac_llm_ops_lab.app import create_app
 
 
 class FakeBackend:
-    def __init__(self, *, ready_after_load: bool = True) -> None:
+    def __init__(
+        self,
+        *,
+        ready_after_load: bool = True,
+        generation_error: Exception | None = None,
+    ) -> None:
         self.ready_after_load = ready_after_load
+        self.generation_error = generation_error
         self.loaded = 0
         self.closed = 0
         self.generated_prompts: list[str] = []
@@ -26,6 +32,8 @@ class FakeBackend:
         return [{"id": "fake-local-model", "object": "model"}]
 
     async def generate(self, prompt: str, model: str) -> str:
+        if self.generation_error is not None:
+            raise self.generation_error
         self.generated_prompts.append(f"{model}:{prompt}")
         return f"fake response to {prompt}"
 
@@ -121,3 +129,31 @@ def test_streaming_chat_emits_openai_compatible_sse_chunks() -> None:
     assert events[-1]["choices"][0]["delta"] == {}
     assert events[-1]["choices"][0]["finish_reason"] == "stop"
     assert backend.generated_prompts == ["fake-local-model:hello"]
+
+
+def test_generation_backend_failures_return_sanitized_error() -> None:
+    backend = FakeBackend(generation_error=RuntimeError("raw backend failure"))
+    app = create_app(backend=backend)
+
+    with TestClient(app, raise_server_exceptions=False) as client:
+        response = client.post(
+            "/v1/chat/completions",
+            headers={"x-request-id": "req-fail"},
+            json={
+                "model": "fake-local-model",
+                "messages": [{"role": "user", "content": "secret prompt"}],
+                "stream": False,
+            },
+        )
+
+    assert response.status_code == 502
+    assert response.headers["x-request-id"] == "req-fail"
+    assert response.json() == {
+        "error": {
+            "code": "backend_generation_failed",
+            "message": "Backend generation failed",
+            "request_id": "req-fail",
+        }
+    }
+    assert "secret prompt" not in response.text
+    assert "raw backend failure" not in response.text

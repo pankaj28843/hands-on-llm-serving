@@ -109,7 +109,16 @@ def create_app(*, backend: ModelBackend) -> FastAPI:
                 media_type="text/event-stream",
             )
 
-        content = await active_backend.generate(prompt, payload.model)
+        try:
+            content = await active_backend.generate(prompt, payload.model)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail={
+                    "code": "backend_generation_failed",
+                    "message": "Backend generation failed",
+                },
+            ) from exc
         return _completion_response(model=payload.model, content=content)
 
     return app
