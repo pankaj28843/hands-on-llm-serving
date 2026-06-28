@@ -1,3 +1,4 @@
+import json
 from collections.abc import AsyncIterator
 
 from fastapi.testclient import TestClient
@@ -88,3 +89,35 @@ def test_liveness_does_not_require_backend_readiness() -> None:
             "request_id": "req-123",
         }
     }
+
+
+def test_streaming_chat_emits_openai_compatible_sse_chunks() -> None:
+    backend = FakeBackend()
+    app = create_app(backend=backend)
+
+    with TestClient(app) as client:
+        with client.stream(
+            "POST",
+            "/v1/chat/completions",
+            json={
+                "model": "fake-local-model",
+                "messages": [{"role": "user", "content": "hello"}],
+                "stream": True,
+            },
+        ) as response:
+            lines = [line for line in response.iter_lines() if line]
+
+    data_lines = [line.removeprefix("data: ") for line in lines]
+    events = [json.loads(line) for line in data_lines[:-1]]
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/event-stream")
+    assert data_lines[-1] == "[DONE]"
+    assert events[0]["choices"][0]["delta"] == {"role": "assistant"}
+    assert [event["choices"][0]["delta"].get("content") for event in events[1:-1]] == [
+        "fake ",
+        "stream",
+    ]
+    assert events[-1]["choices"][0]["delta"] == {}
+    assert events[-1]["choices"][0]["finish_reason"] == "stop"
+    assert backend.generated_prompts == ["fake-local-model:hello"]

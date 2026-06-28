@@ -141,13 +141,27 @@ def _completion_response(*, model: str, content: str) -> dict[str, object]:
 async def _stream_events(
     backend: ModelBackend, *, prompt: str, model: str
 ) -> AsyncIterator[str]:
+    yield _sse_event(
+        model=model,
+        delta={"role": "assistant"},
+        finish_reason=None,
+    )
     async for chunk in backend.stream(prompt, model):
-        event = {
-            "id": f"chatcmpl-{uuid4().hex}",
-            "object": "chat.completion.chunk",
-            "created": int(time.time()),
-            "model": model,
-            "choices": [{"index": 0, "delta": {"content": chunk}}],
-        }
-        yield f"data: {json.dumps(event)}\n\n"
+        yield _sse_event(
+            model=model,
+            delta={"content": chunk},
+            finish_reason=None,
+        )
+    yield _sse_event(model=model, delta={}, finish_reason="stop")
     yield "data: [DONE]\n\n"
+
+
+def _sse_event(*, model: str, delta: dict[str, str], finish_reason: str | None) -> str:
+    event = {
+        "id": f"chatcmpl-{uuid4().hex}",
+        "object": "chat.completion.chunk",
+        "created": int(time.time()),
+        "model": model,
+        "choices": [{"index": 0, "delta": delta, "finish_reason": finish_reason}],
+    }
+    return f"data: {json.dumps(event)}\n\n"
