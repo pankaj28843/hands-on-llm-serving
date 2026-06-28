@@ -255,3 +255,77 @@ def test_runtime_execution_record_rejects_malformed_payload_shape() -> None:
             preflight_report=empty_reason_code,
             evidence_manifest=manifest,
         )
+
+
+def test_runtime_execution_record_rejects_malformed_manifest_payload() -> None:
+    preflight_report = build_runtime_preflight_report(
+        RuntimePreflightPlan(
+            backend_id="fake-batched-backend",
+            model_id="fake-local-model",
+            explicitly_authorized=True,
+            model_weights_gib=1.0,
+            kv_cache_gib=1.0,
+            runtime_overhead_gib=1.0,
+            service_overhead_gib=1.0,
+        )
+    )
+    manifest = build_runtime_evidence_manifest(
+        git_sha="bce02cc",
+        command=("uv", "run", "python", "-m", "mac_llm_ops_lab.cli"),
+        artifact_dir="artifacts/runtime/bce02cc-fake-smoke",
+        log_path="artifacts/runtime/bce02cc-fake-smoke/service.log",
+        host={"os": "macOS", "chip": "Apple Silicon", "memory_gib": 24},
+        backend_id="fake-batched-backend",
+        model_id="fake-local-model",
+        runtime_config={"quantization": "none"},
+        ports={"api": 8000},
+    )
+
+    missing_command = {
+        key: value for key, value in manifest.items() if key != "command"
+    }
+    with pytest.raises(ValueError, match="command"):
+        build_runtime_execution_record(
+            preflight_report=preflight_report,
+            evidence_manifest=missing_command,
+        )
+
+    invalid_artifact_dir = {
+        **manifest,
+        "artifact_dir": "runtime/bce02cc-fake-smoke",
+    }
+    with pytest.raises(ValueError, match="artifact_dir"):
+        build_runtime_execution_record(
+            preflight_report=preflight_report,
+            evidence_manifest=invalid_artifact_dir,
+        )
+
+    missing_host_label = {
+        **manifest,
+        "host": {"os": "macOS", "memory_gib": 24},
+    }
+    with pytest.raises(ValueError, match="host"):
+        build_runtime_execution_record(
+            preflight_report=preflight_report,
+            evidence_manifest=missing_host_label,
+        )
+
+    empty_runtime_config = {
+        **manifest,
+        "runtime_config": {},
+    }
+    with pytest.raises(ValueError, match="runtime_config"):
+        build_runtime_execution_record(
+            preflight_report=preflight_report,
+            evidence_manifest=empty_runtime_config,
+        )
+
+    invalid_ports = {
+        **manifest,
+        "ports": {"api": 0},
+    }
+    with pytest.raises(ValueError, match="ports"):
+        build_runtime_execution_record(
+            preflight_report=preflight_report,
+            evidence_manifest=invalid_ports,
+        )

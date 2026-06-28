@@ -69,6 +69,7 @@ def build_runtime_execution_record(
         expected_schema_version=RUNTIME_EVIDENCE_MANIFEST_SCHEMA_VERSION,
         field_name="evidence_manifest",
     )
+    _validate_evidence_manifest_payload(evidence_manifest)
     _validate_preflight_manifest_consistency(
         preflight_report=preflight_report,
         evidence_manifest=evidence_manifest,
@@ -112,6 +113,35 @@ def _validated_preflight_decision(
     }
 
 
+def _validate_evidence_manifest_payload(
+    evidence_manifest: Mapping[str, object],
+) -> None:
+    backend = _mapping_field(evidence_manifest, "backend")
+    _validated_non_empty_string(evidence_manifest.get("git_sha"), field_name="git_sha")
+    _validated_command(_sequence_field(evidence_manifest, "command"))
+    artifact_dir = _validated_artifact_dir(
+        _validated_non_empty_string(
+            evidence_manifest.get("artifact_dir"),
+            field_name="artifact_dir",
+        )
+    )
+    _validated_log_path(
+        _validated_non_empty_string(
+            evidence_manifest.get("log_path"),
+            field_name="log_path",
+        ),
+        artifact_dir=artifact_dir,
+    )
+    _validated_host(_mapping_field(evidence_manifest, "host"))
+    _validated_non_empty_string(backend.get("id"), field_name="backend_id")
+    _validated_non_empty_string(backend.get("model_id"), field_name="model_id")
+    _validated_non_empty_mapping(
+        _mapping_field(evidence_manifest, "runtime_config"),
+        field_name="runtime_config",
+    )
+    _validated_ports(_mapping_field(evidence_manifest, "ports"))
+
+
 def _validate_preflight_manifest_consistency(
     *,
     preflight_report: Mapping[str, object],
@@ -138,6 +168,16 @@ def _mapping_field(
     return value
 
 
+def _sequence_field(
+    source: Mapping[str, object],
+    field_name: str,
+) -> Sequence[object]:
+    value = source.get(field_name)
+    if isinstance(value, str) or not isinstance(value, Sequence):
+        raise ValueError(f"{field_name} must be a sequence")
+    return value
+
+
 def _validated_non_empty_string(value: object, *, field_name: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field_name} must be non-empty")
@@ -146,7 +186,9 @@ def _validated_non_empty_string(value: object, *, field_name: str) -> str:
 
 def _validated_command(command: Sequence[str]) -> list[str]:
     normalized = list(command)
-    if not normalized or any(not part for part in normalized):
+    if not normalized or any(
+        not isinstance(part, str) or not part for part in normalized
+    ):
         raise ValueError("command must contain at least one non-empty part")
     return normalized
 
@@ -170,11 +212,14 @@ def _validated_non_empty_mapping(
     return normalized
 
 
-def _validated_ports(ports: Mapping[str, int]) -> dict[str, int]:
+def _validated_ports(ports: Mapping[str, object]) -> dict[str, int]:
     normalized = dict(ports)
     if not normalized:
         raise ValueError("ports must be non-empty")
-    if any(not name or port <= 0 for name, port in normalized.items()):
+    if any(
+        not name or not isinstance(port, int) or isinstance(port, bool) or port <= 0
+        for name, port in normalized.items()
+    ):
         raise ValueError("ports must use non-empty names and positive values")
     return normalized
 

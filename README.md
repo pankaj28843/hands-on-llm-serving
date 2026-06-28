@@ -33,7 +33,7 @@ artifact directory, and log path labels. Manifest paths must stay under
 runtime labels must be non-empty.
 Execution records combine the preflight report and evidence manifest, exposing
 the final execute/skip state while checking schema versions, boolean decision
-shape, reason codes, and backend/model consistency.
+shape, reason codes, manifest labels and paths, and backend/model consistency.
 
 For direct Python use:
 
