@@ -5,6 +5,7 @@ import pytest
 from mac_llm_ops_lab.runtime_artifacts import (
     build_runtime_evidence_manifest,
     build_runtime_execution_record,
+    write_runtime_execution_record,
 )
 from mac_llm_ops_lab.runtime_guard import (
     RuntimePreflightPlan,
@@ -328,4 +329,93 @@ def test_runtime_execution_record_rejects_malformed_manifest_payload() -> None:
         build_runtime_execution_record(
             preflight_report=preflight_report,
             evidence_manifest=invalid_ports,
+        )
+
+
+def test_write_runtime_execution_record_persists_json_under_artifact_dir(
+    tmp_path,
+) -> None:
+    preflight_report = build_runtime_preflight_report(
+        RuntimePreflightPlan(
+            backend_id="fake-batched-backend",
+            model_id="fake-local-model",
+            explicitly_authorized=True,
+            model_weights_gib=1.0,
+            kv_cache_gib=1.0,
+            runtime_overhead_gib=1.0,
+            service_overhead_gib=1.0,
+        )
+    )
+    manifest = build_runtime_evidence_manifest(
+        git_sha="bce02cc",
+        command=("uv", "run", "python", "-m", "mac_llm_ops_lab.cli"),
+        artifact_dir="artifacts/runtime/bce02cc-fake-smoke",
+        log_path="artifacts/runtime/bce02cc-fake-smoke/service.log",
+        host={"os": "macOS", "chip": "Apple Silicon", "memory_gib": 24},
+        backend_id="fake-batched-backend",
+        model_id="fake-local-model",
+        runtime_config={"quantization": "none"},
+        ports={"api": 8000},
+    )
+    record = build_runtime_execution_record(
+        preflight_report=preflight_report,
+        evidence_manifest=manifest,
+    )
+
+    output_path = write_runtime_execution_record(record, output_root=tmp_path)
+
+    assert output_path == (
+        tmp_path / "artifacts/runtime/bce02cc-fake-smoke/execution-record.json"
+    )
+    written_text = output_path.read_text(encoding="utf-8")
+    assert written_text.endswith("\n")
+    assert json.loads(written_text) == record
+    assert list(json.loads(written_text)) == [
+        "can_execute",
+        "evidence_manifest",
+        "preflight_report",
+        "reason_code",
+        "schema_version",
+    ]
+
+
+def test_write_runtime_execution_record_rejects_tampered_top_level_state(
+    tmp_path,
+) -> None:
+    preflight_report = build_runtime_preflight_report(
+        RuntimePreflightPlan(
+            backend_id="fake-batched-backend",
+            model_id="fake-local-model",
+            explicitly_authorized=False,
+            model_weights_gib=1.0,
+            kv_cache_gib=1.0,
+            runtime_overhead_gib=1.0,
+            service_overhead_gib=1.0,
+        )
+    )
+    manifest = build_runtime_evidence_manifest(
+        git_sha="bce02cc",
+        command=("uv", "run", "python", "-m", "mac_llm_ops_lab.cli"),
+        artifact_dir="artifacts/runtime/bce02cc-fake-smoke",
+        log_path="artifacts/runtime/bce02cc-fake-smoke/service.log",
+        host={"os": "macOS", "chip": "Apple Silicon", "memory_gib": 24},
+        backend_id="fake-batched-backend",
+        model_id="fake-local-model",
+        runtime_config={"quantization": "none"},
+        ports={"api": 8000},
+    )
+    record = build_runtime_execution_record(
+        preflight_report=preflight_report,
+        evidence_manifest=manifest,
+    )
+
+    with pytest.raises(ValueError, match="can_execute"):
+        write_runtime_execution_record(
+            {**record, "can_execute": True},
+            output_root=tmp_path,
+        )
+    with pytest.raises(ValueError, match="reason_code"):
+        write_runtime_execution_record(
+            {**record, "reason_code": "runtime_preflight_passed"},
+            output_root=tmp_path,
         )

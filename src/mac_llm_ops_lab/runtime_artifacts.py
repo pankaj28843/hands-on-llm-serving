@@ -1,5 +1,6 @@
+import json
 from collections.abc import Mapping, Sequence
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 
 from mac_llm_ops_lab.runtime_guard import RUNTIME_PREFLIGHT_REPORT_SCHEMA_VERSION
 
@@ -82,6 +83,37 @@ def build_runtime_execution_record(
         "preflight_report": dict(preflight_report),
         "evidence_manifest": dict(evidence_manifest),
     }
+
+
+def write_runtime_execution_record(
+    record: Mapping[str, object],
+    *,
+    output_root: Path,
+) -> Path:
+    _validate_schema_version(
+        record,
+        expected_schema_version=RUNTIME_EXECUTION_RECORD_SCHEMA_VERSION,
+        field_name="record",
+    )
+    preflight_report = _mapping_field(record, "preflight_report")
+    evidence_manifest = _mapping_field(record, "evidence_manifest")
+    canonical_record = build_runtime_execution_record(
+        preflight_report=preflight_report,
+        evidence_manifest=evidence_manifest,
+    )
+    if record.get("can_execute") != canonical_record["can_execute"]:
+        raise ValueError("can_execute must match the preflight decision")
+    if record.get("reason_code") != canonical_record["reason_code"]:
+        raise ValueError("reason_code must match the preflight decision")
+    artifact_dir = str(evidence_manifest["artifact_dir"])
+    output_dir = output_root / artifact_dir
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = output_dir / "execution-record.json"
+    output_path.write_text(
+        json.dumps(canonical_record, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return output_path
 
 
 def _validate_schema_version(

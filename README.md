@@ -34,6 +34,8 @@ runtime labels must be non-empty.
 Execution records combine the preflight report and evidence manifest, exposing
 the final execute/skip state while checking schema versions, boolean decision
 shape, reason codes, manifest labels and paths, and backend/model consistency.
+They can be persisted as sorted JSON under the validated artifact directory for
+future runtime evidence bundles.
 
 For direct Python use:
 
