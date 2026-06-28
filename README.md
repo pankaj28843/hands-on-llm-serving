@@ -69,6 +69,10 @@ A standalone `vllm-mlx` smoke did pass with
 `mlx-community/Qwen3-0.6B-8bit` on port 8100, including model download,
 `/v1/models`, chat, streaming, and `/metrics`; evidence is saved under ignored
 `artifacts/runtime/2026-06-28T151600+0200-vllm-mlx/`.
+Future model downloads and native backend starts are gated by
+`mac_llm_ops_lab.model_catalog` and require
+`MAC_LLM_OPS_MODEL_DOWNLOAD_APPROVED=true` plus a passing 24 GiB memory preflight and
+ignored cache policy. See `docs/model-catalog.md`.
 
 The project API can now proxy to that native OpenAI-compatible backend:
 
@@ -107,6 +111,8 @@ See `docs/observability.md` for the OpenTelemetry/Phoenix configuration,
 prompt-safety contract, and runtime proof gate.
 See `docs/open-webui.md` for Open WebUI connection settings and workflow proof
 requirements.
+See `docs/model-catalog.md` for MLX model source evidence, local approval, and
+cache policy.
 
 For direct Python use:
 

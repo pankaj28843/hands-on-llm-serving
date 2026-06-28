@@ -16,6 +16,7 @@ The repo currently has:
 - one model-backed project API smoke, where this repo's FastAPI app proxied to
   the native `vllm-mlx` server through the OpenAI-compatible backend adapter
 - one PostgreSQL migration and sample insert/read proof for persistence metadata
+- one code-backed model catalog/download gate for the approved small MLX model
 - code-backed OpenTelemetry instrumentation for HTTP, scheduler, backend,
   streaming, and SQLAlchemy Unit of Work spans
 - one Phoenix trace export proof for API success, streaming, backend error, and
@@ -26,8 +27,12 @@ The repo currently has:
 The Apple Silicon backend is intentionally native and gated. It is not a
 Compose service yet. The API can be switched from the fake backend to a native
 host OpenAI-compatible backend with `MAC_LLM_OPS_BACKEND_KIND=openai-compatible`. The
-first candidate is `vllm-mlx`, but it still needs cancellation, real-backend
-Phoenix trace, and benchmark gates before the backend slice is complete.
+first candidate is `vllm-mlx`. Future native starts go through
+`mac_llm_ops_lab.model_catalog`, which requires a cataloged model,
+explicit `MAC_LLM_OPS_MODEL_DOWNLOAD_APPROVED=true`, ignored cache policy, and a
+passing memory preflight. The backend slice still needs cancellation,
+real-backend Phoenix trace, Open WebUI-native workflow, and benchmark gates
+before completion.
 
 ## Safe Static Checks
 
@@ -150,6 +155,29 @@ backend `/metrics` head. The API adapter path is now code-backed and tested;
 Open WebUI against the real backend, real-backend Phoenix trace, cancellation,
 and benchmark proof remain separate gates.
 
+## Model Download Gate
+
+The first approved local model is `mlx-community/Qwen3-0.6B-8bit`, pinned in
+the project catalog with Hugging Face model-card metadata, revision
+`11de96878523501bcaa86104e3c186de07ff9068`, `apache-2.0` license, MLX tags,
+and a 4.7 GiB local runtime estimate. Run the CPU-safe gate without starting
+the model:
+
+```bash
+uv run python -m mac_llm_ops_lab.model_catalog mlx-community/Qwen3-0.6B-8bit
+```
+
+That command denies by default. To allow a local run:
+
+```bash
+MAC_LLM_OPS_MODEL_DOWNLOAD_APPROVED=true \
+MODEL_DOWNLOAD_GATE_REPORT=artifacts/runtime/vllm-mlx-model-download-gate.json \
+uv run python -m mac_llm_ops_lab.model_catalog mlx-community/Qwen3-0.6B-8bit
+```
+
+`scripts/run-vllm-mlx-backend.sh` invokes the same gate before `vllm-mlx serve`.
+See `docs/model-catalog.md` for source evidence and cache policy.
+
 ## Open WebUI Workflow Proof
 
 Open WebUI is configured as an OpenAI-compatible frontend for this repo's API.
@@ -183,9 +211,11 @@ The local E2E proof is intentionally narrower than production readiness. These
 claims are not complete yet:
 
 - production secret management beyond the ignored local placeholder file
-- production model-cache policy beyond ignored `model-cache/`
+- production model-cache retention and cleanup policy beyond ignored
+  `model-cache/`
 - production runtime-artifact retention policy beyond ignored `artifacts/runtime/`
-- cancellation, benchmark, and Phoenix trace proof for the real backend
+- cancellation, benchmark, Open WebUI-native workflow, and Phoenix trace proof
+  for the real backend
 
 `secrets/`, `model-cache/`, traces, logs, raw benchmarks, database files, and
 runtime artifacts must stay out of git.
