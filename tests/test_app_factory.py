@@ -6,6 +6,7 @@ from collections.abc import AsyncIterator
 from fastapi.testclient import TestClient
 
 from mac_llm_ops_lab.app import _stream_events, create_app
+from mac_llm_ops_lab.batching import FakeBatchedBackend
 from mac_llm_ops_lab.config import Settings
 from mac_llm_ops_lab.metrics import InMemoryMetrics
 
@@ -370,3 +371,68 @@ def test_streaming_backend_failures_increment_bounded_error_metric() -> None:
     ]
     assert "secret prompt" not in repr(metrics.snapshot())
     assert "raw stream failure" not in repr(metrics.snapshot())
+
+
+def test_app_exposes_fake_batched_backend_metrics_without_prompt_text() -> None:
+    backend = FakeBatchedBackend(model_id="fake-batched-model")
+    app = create_app(backend=backend)
+
+    with TestClient(app) as client:
+        first_response = client.post(
+            "/v1/chat/completions",
+            json={
+                "model": "fake-batched-model",
+                "messages": [{"role": "user", "content": "repeat prompt"}],
+                "stream": False,
+            },
+        )
+        second_response = client.post(
+            "/v1/chat/completions",
+            json={
+                "model": "fake-batched-model",
+                "messages": [{"role": "user", "content": "repeat prompt"}],
+                "stream": False,
+            },
+        )
+        metrics_response = client.get("/metrics/snapshot")
+
+    assert first_response.status_code == 200
+    assert second_response.status_code == 200
+    assert first_response.json()["choices"][0]["message"]["content"] == (
+        "fake-batched-model response to repeat prompt"
+    )
+    assert metrics_response.status_code == 200
+    assert metrics_response.json()["backend_batch_metrics"] == {
+        "model": "fake-batched-model",
+        "batches_total": 2,
+        "requests_total": 2,
+        "max_active_batch_size": 1,
+        "queue_wait_ms_total": 2,
+        "prefill_tokens_total": 2,
+        "decode_tokens_total": 10,
+        "cache_hits_total": 1,
+        "cache_misses_total": 1,
+        "cache_saved_tokens_total": 2,
+        "cancelled_requests_total": 0,
+        "batch_observations": [
+            {
+                "active_batch_size": 1,
+                "cache_hits": 0,
+                "cache_misses": 1,
+                "prefill_tokens": 2,
+                "decode_tokens": 5,
+                "cache_saved_tokens": 0,
+                "cancelled_requests": 0,
+            },
+            {
+                "active_batch_size": 1,
+                "cache_hits": 1,
+                "cache_misses": 0,
+                "prefill_tokens": 0,
+                "decode_tokens": 5,
+                "cache_saved_tokens": 2,
+                "cancelled_requests": 0,
+            },
+        ],
+    }
+    assert "repeat prompt" not in metrics_response.text

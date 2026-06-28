@@ -1,3 +1,4 @@
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 
 
@@ -37,6 +38,21 @@ class FakeBatchedBackend:
 
     async def close(self) -> None:
         self.closed = True
+
+    async def ready(self) -> bool:
+        return self.loaded and not self.closed
+
+    async def list_models(self) -> list[dict[str, str]]:
+        return [{"id": self.model_id, "object": "model"}]
+
+    async def generate(self, prompt: str, model: str) -> str:
+        responses = await self.generate_many(
+            [GenerationRequest(model=model, prompt=prompt)]
+        )
+        return responses[0]
+
+    async def stream(self, prompt: str, model: str) -> AsyncIterator[str]:
+        yield await self.generate(prompt, model)
 
     async def generate_many(self, requests: list[GenerationRequest]) -> list[str]:
         if not self.loaded or self.closed:

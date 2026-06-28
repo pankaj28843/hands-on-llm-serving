@@ -135,9 +135,12 @@ def create_app(*, backend: ModelBackend, settings: Settings | None = None) -> Fa
         }
 
     @app.get("/metrics/snapshot")
-    async def metrics_snapshot(request: Request) -> dict[str, list[dict[str, object]]]:
+    async def metrics_snapshot(request: Request) -> dict[str, object]:
         active_metrics: InMemoryMetrics = request.app.state.metrics
-        return active_metrics.snapshot()
+        snapshot: dict[str, object] = active_metrics.snapshot()
+        if backend_metrics := _backend_batch_metrics(request.app.state.backend):
+            snapshot["backend_batch_metrics"] = backend_metrics
+        return snapshot
 
     @app.post("/v1/chat/completions", response_model=None)
     async def chat_completions(
@@ -248,6 +251,16 @@ def _request_route(request: Request) -> str:
     if isinstance(path, str):
         return path
     return request.url.path
+
+
+def _backend_batch_metrics(backend: object) -> dict[str, object] | None:
+    snapshot = getattr(backend, "batch_metrics_snapshot", None)
+    if not callable(snapshot):
+        return None
+    metrics = snapshot()
+    if isinstance(metrics, dict):
+        return metrics
+    return None
 
 
 async def _stream_events(
