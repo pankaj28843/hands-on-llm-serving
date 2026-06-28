@@ -47,13 +47,14 @@ macOS-local topology for API, PostgreSQL, Phoenix, Open WebUI, and a gated
 native Apple Silicon backend path. The Docker-built fake-backend API stack has
 now been run locally with Compose and probed through `/live`, `/ready`,
 `/v1/models`, non-streaming chat, streaming chat, and `/metrics/snapshot`.
-Phoenix and Open WebUI were reachable, with Phoenix exposed on
-`PHOENIX_HOST_PORT=16006` because another local container owned port 6006.
+Phoenix and Open WebUI are exposed on high local ports by default to avoid
+collisions with common developer services.
 Evidence is saved under the ignored
 `artifacts/runtime/2026-06-28T145945+0200-e2e/` bundle.
 
-This is not yet full production proof: real-backend cancellation/benchmarks,
-MkDocs, cluster routing, and release/no-leak checks are still pending.
+This is not yet full production proof: benchmark qualification,
+Open WebUI-native workflow, MkDocs, cluster routing, and release/no-leak checks
+are still pending.
 PostgreSQL persistence now has
 SQLAlchemy/Alembic code and a local migration plus sample insert/read proof
 under ignored `artifacts/runtime/2026-06-28T154545+0200-postgres-persistence/`.
@@ -65,8 +66,11 @@ default for imports and tests, while Compose enables API export to Phoenix via
 Phoenix receipt evidence is saved under ignored
 `artifacts/runtime/2026-06-28T160713+0200-phoenix-otel/`; see
 `docs/observability.md`.
+Real-backend Phoenix evidence for the `openai-compatible` `vllm-mlx` path is
+saved under ignored
+`artifacts/runtime/2026-06-28T173605+0200-vllm-mlx-phoenix-real-backend/`.
 A standalone `vllm-mlx` smoke did pass with
-`mlx-community/Qwen3-0.6B-8bit` on port 8100, including model download,
+`mlx-community/Qwen3-0.6B-8bit`, including model download,
 `/v1/models`, chat, streaming, and `/metrics`; evidence is saved under ignored
 `artifacts/runtime/2026-06-28T151600+0200-vllm-mlx/`.
 Future model downloads and native backend starts are gated by
@@ -77,14 +81,16 @@ ignored cache policy. See `docs/model-catalog.md`.
 The project API can now proxy to that native OpenAI-compatible backend:
 
 ```bash
-MODEL_ID=mlx-community/Qwen3-0.6B-8bit scripts/run-vllm-mlx-backend.sh
+MODEL_ID=mlx-community/Qwen3-0.6B-8bit \
+VLLM_MLX_PORT=28100 \
+scripts/run-vllm-mlx-backend.sh
 ```
 
 ```bash
 MODEL_ID=mlx-community/Qwen3-0.6B-8bit \
 MAC_LLM_OPS_BACKEND_KIND=openai-compatible \
-MAC_LLM_OPS_OPENAI_BASE_URL=http://127.0.0.1:8100/v1 \
-API_PORT=8020 \
+MAC_LLM_OPS_OPENAI_BASE_URL=http://127.0.0.1:28100/v1 \
+API_PORT=28020 \
 scripts/run-model-backed-api.sh
 ```
 

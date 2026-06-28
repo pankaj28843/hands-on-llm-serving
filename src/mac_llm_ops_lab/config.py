@@ -13,7 +13,7 @@ class Settings(BaseModel):
     model_allowlist: tuple[str, ...] = ()
     capture_request_bodies: bool = False
     backend_kind: Literal["fake", "openai-compatible"] = "fake"
-    openai_base_url: str = "http://127.0.0.1:8100/v1"
+    openai_base_url: str = "http://127.0.0.1:28100/v1"
     openai_api_key: str | None = None
     openai_timeout_seconds: float = 30.0
     otel_enabled: bool = False

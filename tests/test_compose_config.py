@@ -38,7 +38,7 @@ def test_compose_yaml_is_valid_and_keeps_real_backend_native_gated() -> None:
     api = services["api"]
     assert api["environment"]["MAC_LLM_OPS_BACKEND_KIND"] == "fake"
     assert api["environment"]["MAC_LLM_OPS_OPENAI_BASE_URL"] == (
-        "http://host.docker.internal:8100/v1"
+        "http://host.docker.internal:28100/v1"
     )
     assert api["environment"]["MAC_LLM_OPS_OPENAI_TIMEOUT_SECONDS"] == "30"
     assert api["environment"]["MAC_LLM_OPS_OTEL_ENABLED"] == "true"
@@ -69,6 +69,22 @@ def test_compose_yaml_is_valid_and_keeps_real_backend_native_gated() -> None:
     assert open_webui["environment"]["OPENAI_API_BASE_URLS"] == ("http://api:8000/v1")
     assert open_webui["environment"]["ENABLE_OLLAMA_API"] == "False"
 
+    published_ports = {
+        service: sorted(
+            int(publisher["published"]) for publisher in service_config.get("ports", [])
+        )
+        for service, service_config in services.items()
+    }
+    assert published_ports["postgres"] == [25432]
+    assert published_ports["phoenix"] == [24317, 26006, 29090]
+    assert published_ports["api"] == [28000]
+    assert published_ports["open-webui"] == [23000]
+    assert all(
+        20000 <= port <= 50000
+        for service_ports in published_ports.values()
+        for port in service_ports
+    )
+
 
 def test_local_secret_files_stay_out_of_git() -> None:
     gitignore_text = Path(".gitignore").read_text(encoding="utf-8")
@@ -83,9 +99,9 @@ def test_local_secret_files_stay_out_of_git() -> None:
 def test_compose_host_ports_are_overridable_for_local_collisions() -> None:
     compose_text = Path("compose.yaml").read_text(encoding="utf-8")
 
-    assert "${POSTGRES_HOST_PORT:-5432}:5432" in compose_text
-    assert "${PHOENIX_HOST_PORT:-6006}:6006" in compose_text
-    assert "${OTLP_GRPC_HOST_PORT:-4317}:4317" in compose_text
-    assert "${PHOENIX_PROMETHEUS_HOST_PORT:-9090}:9090" in compose_text
-    assert "${API_HOST_PORT:-8000}:8000" in compose_text
-    assert "${OPEN_WEBUI_HOST_PORT:-3000}:8080" in compose_text
+    assert "${POSTGRES_HOST_PORT:-25432}:5432" in compose_text
+    assert "${PHOENIX_HOST_PORT:-26006}:6006" in compose_text
+    assert "${OTLP_GRPC_HOST_PORT:-24317}:4317" in compose_text
+    assert "${PHOENIX_PROMETHEUS_HOST_PORT:-29090}:9090" in compose_text
+    assert "${API_HOST_PORT:-28000}:8000" in compose_text
+    assert "${OPEN_WEBUI_HOST_PORT:-23000}:8080" in compose_text

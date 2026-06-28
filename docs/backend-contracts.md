@@ -39,7 +39,7 @@ backend:
 
 ```bash
 uv tool run vllm-mlx bench-serve \
-  --url http://127.0.0.1:8100 \
+  --url http://127.0.0.1:28100 \
   --model mlx-community/Qwen3-0.6B-8bit \
   --prompts short \
   --concurrency 1 \
@@ -60,9 +60,9 @@ latency, throughput, Metal memory, cache hits/misses, and validation state.
 
 ## Boundaries
 
-This contract does not prove cancellation, real-backend Phoenix spans, or Open
-WebUI against the native backend. Those remain separate slice 10 gates.
+This contract does not prove Open WebUI against the native backend or a fuller
+production benchmark. Those remain separate slice 10 gates.
 
 Current status: metrics and benchmark parsing are code-backed.
 
-real-backend Phoenix spans remain separate.
+Open WebUI against the native backend remains separate.

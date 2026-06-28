@@ -178,6 +178,8 @@ def test_open_webui_docs_describe_compose_and_host_connection_contract() -> None
         "ENABLE_PERSISTENT_CONFIG=False",
         "ENABLE_OLLAMA_API=False",
         "host.docker.internal",
+        "http://localhost:23000",
+        "http://localhost:28000",
         "/v1/models",
         "/v1/chat/completions",
         "temperature",

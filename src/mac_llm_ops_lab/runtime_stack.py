@@ -33,13 +33,13 @@ def _api_service() -> dict[str, object]:
             "--host",
             "0.0.0.0",
             "--port",
-            "8000",
+            "28000",
         ],
-        "ports": {"api": 8000},
+        "ports": {"api": 28000},
         "environment": {
             "MAC_LLM_OPS_BACKEND_KIND": "${MAC_LLM_OPS_BACKEND_KIND:-fake}",
             "MAC_LLM_OPS_OPENAI_BASE_URL": (
-                "${MAC_LLM_OPS_OPENAI_BASE_URL:-http://host.docker.internal:8100/v1}"
+                "${MAC_LLM_OPS_OPENAI_BASE_URL:-http://host.docker.internal:28100/v1}"
             ),
             "MAC_LLM_OPS_OPENAI_TIMEOUT_SECONDS": "${MAC_LLM_OPS_OPENAI_TIMEOUT_SECONDS:-30}",
             "MAC_LLM_OPS_MODEL_ALLOWLIST": "${MAC_LLM_OPS_MODEL_ALLOWLIST:-}",
@@ -64,7 +64,7 @@ def _postgres_service() -> dict[str, object]:
         "name": "postgres",
         "runtime": "docker",
         "image": "postgres:16",
-        "ports": {"postgres": 5432},
+        "ports": {"postgres": 25432},
         "environment": {
             "POSTGRES_DB": "llm_serving",
             "POSTGRES_PASSWORD_FILE": "/run/secrets/postgres_password",
@@ -89,9 +89,9 @@ def _phoenix_service() -> dict[str, object]:
         "runtime": "docker",
         "image": "arizephoenix/phoenix:latest",
         "ports": {
-            "ui": 6006,
-            "otlp_grpc": 4317,
-            "prometheus": 9090,
+            "ui": 26006,
+            "otlp_grpc": 24317,
+            "prometheus": 29090,
         },
         "environment": {
             "PHOENIX_SQL_DATABASE_URL": (
@@ -109,11 +109,11 @@ def _open_webui_service() -> dict[str, object]:
         "name": "open-webui",
         "runtime": "docker",
         "image": "ghcr.io/open-webui/open-webui:main",
-        "ports": {"ui": 3000, "container": 8080},
+        "ports": {"ui": 23000, "container": 8080},
         "environment": {
             "ENABLE_PERSISTENT_CONFIG": "False",
             "ENABLE_OLLAMA_API": "False",
-            "OPENAI_API_BASE_URLS": "http://host.docker.internal:8000/v1",
+            "OPENAI_API_BASE_URLS": "http://host.docker.internal:28000/v1",
             "OPENAI_API_KEYS": "local-dev-placeholder",
             "WEBUI_AUTH": "False",
         },

@@ -21,6 +21,8 @@ The repo currently has:
   streaming, and SQLAlchemy Unit of Work spans
 - one Phoenix trace export proof for API success, streaming, backend error, and
   database transaction spans
+- one real-backend Phoenix trace proof for `openai-compatible` `vllm-mlx`
+  chat, streaming, and cancelled stream spans
 - one Open WebUI workflow proof where the UI discovered `fake-local-model`,
   submitted chat, and rendered a fake-backend response through the Compose API
 
@@ -30,9 +32,8 @@ host OpenAI-compatible backend with `MAC_LLM_OPS_BACKEND_KIND=openai-compatible`
 first candidate is `vllm-mlx`. Future native starts go through
 `mac_llm_ops_lab.model_catalog`, which requires a cataloged model,
 explicit `MAC_LLM_OPS_MODEL_DOWNLOAD_APPROVED=true`, ignored cache policy, and a
-passing memory preflight. The backend slice still needs cancellation,
-real-backend Phoenix trace, Open WebUI-native workflow, and benchmark gates
-before completion.
+passing memory preflight. The backend slice still needs
+Open WebUI-native workflow and benchmark qualification before completion.
 
 ## Safe Static Checks
 
@@ -54,12 +55,22 @@ artifacts:
 ```bash
 mkdir -p secrets artifacts/runtime/2026-06-28T145945+0200-e2e
 # secrets/postgres_password.txt contains the local placeholder used by compose.
-PHOENIX_HOST_PORT=16006 docker compose up -d --build
+docker compose up -d --build
 ```
 
-`PHOENIX_HOST_PORT=16006` was needed on this MacBook because another local
-Docker project already owned `localhost:6006`. Without that collision, the
-default Phoenix URL remains `http://localhost:6006`.
+The default host bindings intentionally use high local ports:
+
+```text
+API: http://localhost:28000
+Open WebUI: http://localhost:23000
+Phoenix: http://localhost:26006
+PostgreSQL: localhost:25432
+OTLP gRPC: localhost:24317
+Phoenix Prometheus: http://localhost:29090
+```
+
+Container-internal URLs still use service-native ports, such as
+`http://api:8000/v1` and `http://phoenix:6006/v1/traces`.
 
 The saved evidence bundle is under:
 
@@ -77,8 +88,8 @@ The proof includes:
 - API non-streaming `POST /v1/chat/completions`
 - API streaming `POST /v1/chat/completions`
 - API `GET /metrics/snapshot`
-- Phoenix HTTP `200 OK` on `http://localhost:16006/`
-- Open WebUI healthy container and root HTML on `http://localhost:3000/`
+- Phoenix HTTP `200 OK` on the mapped local UI port
+- Open WebUI healthy container and root HTML on the mapped local UI port
 - Open WebUI default embedding asset download into its Docker volume
 
 Open WebUI root reachability is proven; its backend API probes returned `401`
@@ -98,7 +109,7 @@ HF_HOME="$PWD/model-cache/huggingface" \
   vllm-mlx serve mlx-community/Qwen3-0.6B-8bit \
   --served-model-name mlx-qwen3-0.6b-8bit \
   --host 127.0.0.1 \
-  --port 8100 \
+  --port 28100 \
   --max-request-tokens 128 \
   --max-tokens 64 \
   --max-num-seqs 2 \
@@ -127,7 +138,9 @@ backend switch. With the downloaded MLX model available under ignored
 `model-cache/`, this native backend command starts the local model server:
 
 ```bash
-MODEL_ID=mlx-community/Qwen3-0.6B-8bit scripts/run-vllm-mlx-backend.sh
+MODEL_ID=mlx-community/Qwen3-0.6B-8bit \
+VLLM_MLX_PORT=28100 \
+scripts/run-vllm-mlx-backend.sh
 ```
 
 In a second shell, start this repo's API against that backend:
@@ -135,8 +148,8 @@ In a second shell, start this repo's API against that backend:
 ```bash
 MODEL_ID=mlx-community/Qwen3-0.6B-8bit \
 MAC_LLM_OPS_BACKEND_KIND=openai-compatible \
-MAC_LLM_OPS_OPENAI_BASE_URL=http://127.0.0.1:8100/v1 \
-API_PORT=8020 \
+MAC_LLM_OPS_OPENAI_BASE_URL=http://127.0.0.1:28100/v1 \
+API_PORT=28020 \
 scripts/run-model-backed-api.sh
 ```
 
@@ -146,14 +159,41 @@ The saved evidence bundle is under:
 artifacts/runtime/2026-06-28T153000+0200-model-backed-api-e2e/
 ```
 
-The proof used `vllm-mlx` on `127.0.0.1:8100` and this repo's FastAPI app on
-`127.0.0.1:8020` because local ports `8000` and `8010` were already occupied.
+The original proof used lower temporary ports; current runbook defaults use
+`vllm-mlx` on `127.0.0.1:28100` and this repo's FastAPI app on
+`127.0.0.1:28020`.
 It includes project API `GET /live`, `GET /ready`, `GET /v1/models`,
 non-streaming `POST /v1/chat/completions`, streaming
 `POST /v1/chat/completions`, project API `GET /metrics/snapshot`, and the
 backend `/metrics` head. The API adapter path is now code-backed and tested;
-Open WebUI against the real backend, real-backend Phoenix trace, cancellation,
-and benchmark proof remain separate gates.
+Open WebUI against the real backend and benchmark proof remain separate gates.
+
+## Real-Backend Phoenix Trace Proof
+
+The model-backed API has also been run with OpenTelemetry enabled against the
+native `vllm-mlx` backend on high local ports:
+
+```bash
+VLLM_MLX_PORT=28100 scripts/run-vllm-mlx-backend.sh
+MAC_LLM_OPS_BACKEND_KIND=openai-compatible \
+MAC_LLM_OPS_OPENAI_BASE_URL=http://127.0.0.1:28100/v1 \
+MAC_LLM_OPS_OTEL_ENABLED=true \
+MAC_LLM_OPS_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://127.0.0.1:26006/v1/traces \
+API_PORT=28020 \
+scripts/run-model-backed-api.sh
+```
+
+The saved evidence bundle is under:
+
+```text
+artifacts/runtime/2026-06-28T173605+0200-vllm-mlx-phoenix-real-backend/
+```
+
+The proof includes real-backend non-streaming chat, streaming chat, an
+intentionally interrupted stream, Phoenix/PostgreSQL span queries for
+`openai-compatible` HTTP, scheduler, `gen_ai.chat`, `gen_ai.stream`, and
+cancelled stream spans, plus a publish-safety scan over the trace/query proof
+files.
 
 ## Model Download Gate
 
@@ -214,8 +254,8 @@ claims are not complete yet:
 - production model-cache retention and cleanup policy beyond ignored
   `model-cache/`
 - production runtime-artifact retention policy beyond ignored `artifacts/runtime/`
-- cancellation, benchmark, Open WebUI-native workflow, and Phoenix trace proof
-  for the real backend
+- benchmark qualification and Open WebUI-native workflow proof for the real
+  backend
 
 `secrets/`, `model-cache/`, traces, logs, raw benchmarks, database files, and
 runtime artifacts must stay out of git.
@@ -233,20 +273,22 @@ MAC_LLM_OPS_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://phoenix:6006/v1/traces
 MAC_LLM_OPS_PHOENIX_PROJECT_NAME=mac-llm-ops-lab-local
 ```
 
-For a host-run API against the locally mapped Phoenix UI port used in the first
-E2E run, use:
+For a host-run API against the locally mapped Phoenix UI port, use:
 
 ```bash
 MAC_LLM_OPS_OTEL_ENABLED=true \
-MAC_LLM_OPS_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://127.0.0.1:16006/v1/traces \
+MAC_LLM_OPS_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://127.0.0.1:26006/v1/traces \
 MAC_LLM_OPS_PHOENIX_PROJECT_NAME=mac-llm-ops-lab-local \
-uv run uvicorn mac_llm_ops_lab.cli:app --host 127.0.0.1 --port 8020
+uv run uvicorn mac_llm_ops_lab.cli:app --host 127.0.0.1 --port 28020
 ```
 
 Saved proof under `artifacts/runtime/2026-06-28T160713+0200-phoenix-otel/`
 shows local Phoenix received prompt-safe HTTP, scheduler, backend, streaming
-token/error, and database transaction spans. See `docs/observability.md` for
-the prompt-safety contract and the evidence requirements for future runs.
+token/error, and database transaction spans. Real-backend proof under
+`artifacts/runtime/2026-06-28T173605+0200-vllm-mlx-phoenix-real-backend/`
+shows the `openai-compatible` `vllm-mlx` path emitting chat, stream, and
+cancelled stream spans. See `docs/observability.md` for the prompt-safety
+contract and the evidence requirements for future runs.
 
 ## Current Service Intent
 

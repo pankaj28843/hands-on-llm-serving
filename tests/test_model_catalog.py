@@ -103,6 +103,7 @@ def test_vllm_mlx_startup_script_runs_model_download_gate() -> None:
     assert "MAC_LLM_OPS_MODEL_DOWNLOAD_APPROVED" in script
     assert "mac_llm_ops_lab.model_catalog" in script
     assert "MODEL_DOWNLOAD_GATE_REPORT" in script
+    assert 'PORT="${VLLM_MLX_PORT:-28100}"' in script
 
 
 def test_model_catalog_docs_describe_approval_and_source_evidence() -> None:

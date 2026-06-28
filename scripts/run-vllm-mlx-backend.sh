@@ -4,7 +4,7 @@ set -euo pipefail
 MODEL_ID="${MODEL_ID:-mlx-community/Qwen3-0.6B-8bit}"
 SERVED_MODEL_NAME="${SERVED_MODEL_NAME:-$MODEL_ID}"
 HOST="${VLLM_MLX_HOST:-127.0.0.1}"
-PORT="${VLLM_MLX_PORT:-8100}"
+PORT="${VLLM_MLX_PORT:-28100}"
 HF_HOME="${HF_HOME:-$PWD/model-cache/huggingface}"
 MAC_LLM_OPS_MODEL_DOWNLOAD_APPROVED="${MAC_LLM_OPS_MODEL_DOWNLOAD_APPROVED:-false}"
 MODEL_DOWNLOAD_GATE_REPORT="${MODEL_DOWNLOAD_GATE_REPORT:-artifacts/runtime/vllm-mlx-model-download-gate.json}"

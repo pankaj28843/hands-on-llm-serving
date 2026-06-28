@@ -9,7 +9,10 @@ def test_runtime_stack_docs_define_static_and_runtime_boundaries() -> None:
 
     for required in (
         "docker compose config",
-        "PHOENIX_HOST_PORT=16006 docker compose up -d --build",
+        "docker compose up -d --build",
+        "http://localhost:28000",
+        "http://localhost:26006",
+        "http://localhost:23000",
         "artifacts/runtime/2026-06-28T145945+0200-e2e/",
         "/live",
         "/ready",
@@ -21,7 +24,10 @@ def test_runtime_stack_docs_define_static_and_runtime_boundaries() -> None:
         "artifacts/runtime/2026-06-28T151600+0200-vllm-mlx/",
         "Model-Backed Project API Smoke",
         "artifacts/runtime/2026-06-28T153000+0200-model-backed-api-e2e/",
+        "artifacts/runtime/2026-06-28T173605+0200-vllm-mlx-phoenix-real-backend/",
         "MAC_LLM_OPS_BACKEND_KIND=openai-compatible",
+        "VLLM_MLX_PORT=28100",
+        "API_PORT=28020",
         "Apple Silicon backend",
         "not complete",
     ):

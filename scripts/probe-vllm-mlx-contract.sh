@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-URL="${VLLM_MLX_URL:-http://127.0.0.1:8100}"
+URL="${VLLM_MLX_URL:-http://127.0.0.1:28100}"
 MODEL_ID="${MODEL_ID:-mlx-community/Qwen3-0.6B-8bit}"
 RUN_ID="${RUN_ID:-$(date +%Y-%m-%dT%H%M%S%z)-vllm-mlx-contract}"
 ARTIFACT_DIR="${ARTIFACT_DIR:-artifacts/runtime/$RUN_ID}"

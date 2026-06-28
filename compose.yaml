@@ -13,7 +13,7 @@ services:
       timeout: 5s
       retries: 5
     ports:
-      - "${POSTGRES_HOST_PORT:-5432}:5432"
+      - "${POSTGRES_HOST_PORT:-25432}:5432"
     secrets:
       - source: postgres_password
         target: postgres_password
@@ -28,9 +28,9 @@ services:
     environment:
       PHOENIX_SQL_DATABASE_URL: postgresql://llm_serving:${POSTGRES_PASSWORD:-local-placeholder}@postgres:5432/llm_serving
     ports:
-      - "${PHOENIX_HOST_PORT:-6006}:6006"
-      - "${OTLP_GRPC_HOST_PORT:-4317}:4317"
-      - "${PHOENIX_PROMETHEUS_HOST_PORT:-9090}:9090"
+      - "${PHOENIX_HOST_PORT:-26006}:6006"
+      - "${OTLP_GRPC_HOST_PORT:-24317}:4317"
+      - "${PHOENIX_PROMETHEUS_HOST_PORT:-29090}:9090"
 
   api:
     build:
@@ -46,13 +46,13 @@ services:
       MAC_LLM_OPS_BACKEND_KIND: ${MAC_LLM_OPS_BACKEND_KIND:-fake}
       MAC_LLM_OPS_MODEL_ALLOWLIST: ${MAC_LLM_OPS_MODEL_ALLOWLIST:-}
       MAC_LLM_OPS_OPENAI_API_KEY: ${MAC_LLM_OPS_OPENAI_API_KEY:-}
-      MAC_LLM_OPS_OPENAI_BASE_URL: ${MAC_LLM_OPS_OPENAI_BASE_URL:-http://host.docker.internal:8100/v1}
+      MAC_LLM_OPS_OPENAI_BASE_URL: ${MAC_LLM_OPS_OPENAI_BASE_URL:-http://host.docker.internal:28100/v1}
       MAC_LLM_OPS_OPENAI_TIMEOUT_SECONDS: ${MAC_LLM_OPS_OPENAI_TIMEOUT_SECONDS:-30}
       MAC_LLM_OPS_OTEL_ENABLED: ${MAC_LLM_OPS_OTEL_ENABLED:-true}
       MAC_LLM_OPS_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: ${MAC_LLM_OPS_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:-http://phoenix:6006/v1/traces}
       MAC_LLM_OPS_PHOENIX_PROJECT_NAME: ${MAC_LLM_OPS_PHOENIX_PROJECT_NAME:-mac-llm-ops-lab-local}
     ports:
-      - "${API_HOST_PORT:-8000}:8000"
+      - "${API_HOST_PORT:-28000}:8000"
 
   open-webui:
     image: ghcr.io/open-webui/open-webui:main
@@ -66,7 +66,7 @@ services:
       OPENAI_API_KEYS: local-dev-placeholder
       WEBUI_AUTH: "False"
     ports:
-      - "${OPEN_WEBUI_HOST_PORT:-3000}:8080"
+      - "${OPEN_WEBUI_HOST_PORT:-23000}:8080"
     volumes:
       - open-webui-data:/app/backend/data
 

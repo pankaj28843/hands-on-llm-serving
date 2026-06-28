@@ -12,6 +12,7 @@ def test_observability_docs_describe_phoenix_and_prompt_safety() -> None:
         "Phoenix",
         "MAC_LLM_OPS_OTEL_ENABLED",
         "MAC_LLM_OPS_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT",
+        "http://127.0.0.1:26006/v1/traces",
         "http://phoenix:6006/v1/traces",
         "gen_ai.usage.input_tokens",
         "gen_ai.usage.output_tokens",
@@ -20,6 +21,8 @@ def test_observability_docs_describe_phoenix_and_prompt_safety() -> None:
         "db.transaction.outcome",
         "does not capture prompts",
         "artifacts/runtime/2026-06-28T160713+0200-phoenix-otel/",
+        "artifacts/runtime/2026-06-28T173605+0200-vllm-mlx-phoenix-real-backend/",
+        "openai-compatible",
         "Phoenix trace receipt",
     ):
         assert required in text

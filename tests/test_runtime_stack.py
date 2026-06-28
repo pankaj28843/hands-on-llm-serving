@@ -30,7 +30,7 @@ def test_local_runtime_stack_plan_declares_real_services_without_side_effects() 
     postgres = services["postgres"]
     assert postgres["runtime"] == "docker"
     assert postgres["image"].startswith("postgres:")
-    assert postgres["ports"] == {"postgres": 5432}
+    assert postgres["ports"] == {"postgres": 25432}
     assert "POSTGRES_PASSWORD_FILE" in postgres["environment"]
     assert "POSTGRES_PASSWORD" not in postgres["environment"]
     assert "pg_isready" in postgres["healthcheck"]
@@ -45,9 +45,9 @@ def test_local_runtime_stack_plan_declares_real_services_without_side_effects() 
         "postgres": {"condition": "service_healthy"},
     }
     assert phoenix["ports"] == {
-        "ui": 6006,
-        "otlp_grpc": 4317,
-        "prometheus": 9090,
+        "ui": 26006,
+        "otlp_grpc": 24317,
+        "prometheus": 29090,
     }
     assert phoenix["environment"]["PHOENIX_SQL_DATABASE_URL"].startswith(
         "postgresql://",
@@ -56,11 +56,11 @@ def test_local_runtime_stack_plan_declares_real_services_without_side_effects() 
     open_webui = services["open-webui"]
     assert open_webui["runtime"] == "docker"
     assert open_webui["image"] == "ghcr.io/open-webui/open-webui:main"
-    assert open_webui["ports"] == {"ui": 3000, "container": 8080}
+    assert open_webui["ports"] == {"ui": 23000, "container": 8080}
     assert open_webui["environment"] == {
         "ENABLE_PERSISTENT_CONFIG": "False",
         "ENABLE_OLLAMA_API": "False",
-        "OPENAI_API_BASE_URLS": "http://host.docker.internal:8000/v1",
+        "OPENAI_API_BASE_URLS": "http://host.docker.internal:28000/v1",
         "OPENAI_API_KEYS": "local-dev-placeholder",
         "WEBUI_AUTH": "False",
     }
@@ -76,13 +76,13 @@ def test_local_runtime_stack_plan_declares_real_services_without_side_effects() 
         "--host",
         "0.0.0.0",
         "--port",
-        "8000",
+        "28000",
     ]
-    assert api["ports"] == {"api": 8000}
+    assert api["ports"] == {"api": 28000}
     assert api["environment"] == {
         "MAC_LLM_OPS_BACKEND_KIND": "${MAC_LLM_OPS_BACKEND_KIND:-fake}",
         "MAC_LLM_OPS_OPENAI_BASE_URL": (
-            "${MAC_LLM_OPS_OPENAI_BASE_URL:-http://host.docker.internal:8100/v1}"
+            "${MAC_LLM_OPS_OPENAI_BASE_URL:-http://host.docker.internal:28100/v1}"
         ),
         "MAC_LLM_OPS_OPENAI_TIMEOUT_SECONDS": "${MAC_LLM_OPS_OPENAI_TIMEOUT_SECONDS:-30}",
         "MAC_LLM_OPS_MODEL_ALLOWLIST": "${MAC_LLM_OPS_MODEL_ALLOWLIST:-}",

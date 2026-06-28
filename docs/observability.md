@@ -30,9 +30,9 @@ Enable Phoenix export for a host-run API:
 
 ```bash
 MAC_LLM_OPS_OTEL_ENABLED=true \
-MAC_LLM_OPS_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://127.0.0.1:16006/v1/traces \
+MAC_LLM_OPS_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://127.0.0.1:26006/v1/traces \
 MAC_LLM_OPS_PHOENIX_PROJECT_NAME=mac-llm-ops-lab-local \
-uv run uvicorn mac_llm_ops_lab.cli:app --host 127.0.0.1 --port 8020
+uv run uvicorn mac_llm_ops_lab.cli:app --host 127.0.0.1 --port 28020
 ```
 
 In Compose, the API defaults to:
@@ -89,3 +89,10 @@ Current saved proof exists under
 Phoenix trace receipt for HTTP, scheduler, backend generation, streaming token
 and error, and `db.transaction` spans, plus a publish-safety grep over saved
 trace artifacts.
+
+Real-backend Phoenix proof exists under
+`artifacts/runtime/2026-06-28T173605+0200-vllm-mlx-phoenix-real-backend/`.
+That bundle drove the OpenAI-compatible `vllm-mlx` path on high local ports and
+queries Phoenix/PostgreSQL for `openai-compatible` HTTP, scheduler,
+`gen_ai.chat`, `gen_ai.stream`, and cancelled stream spans for
+`mlx-community/Qwen3-0.6B-8bit`.

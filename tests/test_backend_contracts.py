@@ -219,6 +219,7 @@ def test_write_backend_contract_report_persists_sorted_json(tmp_path: Path) -> N
 def test_probe_script_generates_backend_contract_report() -> None:
     script = Path("scripts/probe-vllm-mlx-contract.sh").read_text(encoding="utf-8")
 
+    assert 'URL="${VLLM_MLX_URL:-http://127.0.0.1:28100}"' in script
     assert 'curl -fsS "$URL/metrics"' in script
     assert "vllm-mlx bench-serve" in script
     assert "mac_llm_ops_lab.backend_contracts" in script
@@ -233,6 +234,6 @@ def test_backend_contract_docs_describe_metrics_and_benchmark_boundaries() -> No
         "vllm_mlx_metal_memory_bytes",
         "vllm-mlx bench-serve",
         "validated:false",
-        "real-backend Phoenix spans remain separate",
+        "Open WebUI against the native backend remains separate",
     ):
         assert required in text

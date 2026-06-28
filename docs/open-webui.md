@@ -20,7 +20,8 @@ The relevant Open WebUI contract is protocol-oriented:
   `logit_bias`.
 - Docker-hosted Open WebUI must use a container-reachable URL. In this Compose
   stack the API service URL is `http://api:8000/v1`; from a standalone Open
-  WebUI container targeting a host process, use `host.docker.internal`.
+  WebUI container targeting a host process, use `host.docker.internal`. From
+  the host browser, the default Compose URL is `http://localhost:23000`.
 
 ## Compose Configuration
 
@@ -57,12 +58,12 @@ missing `host.docker.internal:11434` logs are not useful signal.
 This project's API must stay compatible with the Open WebUI path:
 
 ```bash
-curl http://localhost:8000/v1/models \
+curl http://localhost:28000/v1/models \
   -H 'Authorization: Bearer local-dev-placeholder'
 ```
 
 ```bash
-curl http://localhost:8000/v1/chat/completions \
+curl http://localhost:28000/v1/chat/completions \
   -H 'Authorization: Bearer local-dev-placeholder' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -90,7 +91,7 @@ artifacts/runtime/2026-06-28T163030+0200-open-webui/
 
 That bundle shows:
 
-- Open WebUI container is healthy and reachable at `http://localhost:3000`.
+- Open WebUI container is healthy and reachable at `http://localhost:23000`.
 - Open WebUI sees the API model through `/v1/models`.
 - A chat request submitted through Open WebUI reaches
   `/v1/chat/completions`.

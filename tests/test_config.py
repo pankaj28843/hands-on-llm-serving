@@ -33,6 +33,6 @@ def test_settings_defaults_keep_prompt_capture_disabled() -> None:
     assert settings.model_allowlist == ()
     assert settings.capture_request_bodies is False
     assert settings.backend_kind == "fake"
-    assert settings.openai_base_url == "http://127.0.0.1:8100/v1"
+    assert settings.openai_base_url == "http://127.0.0.1:28100/v1"
     assert settings.openai_api_key is None
     assert settings.openai_timeout_seconds == 30.0
