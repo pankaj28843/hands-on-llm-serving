@@ -55,6 +55,7 @@ def test_fake_batched_backend_records_bounded_batch_and_cache_metrics() -> None:
                 "prefill_tokens": 6,
                 "decode_tokens": 12,
                 "cache_saved_tokens": 0,
+                "cancelled_requests": 0,
             },
             {
                 "active_batch_size": 1,
@@ -63,7 +64,60 @@ def test_fake_batched_backend_records_bounded_batch_and_cache_metrics() -> None:
                 "prefill_tokens": 0,
                 "decode_tokens": 6,
                 "cache_saved_tokens": 3,
+                "cancelled_requests": 0,
             },
         ],
     }
     assert "shared prefix" not in repr(metrics)
+
+
+def test_fake_batched_backend_counts_cancelled_requests_without_work() -> None:
+    backend = FakeBatchedBackend(model_id="fake-batched-model")
+
+    async def run_batch() -> tuple[list[str], dict[str, object]]:
+        await backend.load()
+        responses = await backend.generate_many(
+            [
+                GenerationRequest(model="fake-batched-model", prompt="first active"),
+                GenerationRequest(
+                    model="fake-batched-model",
+                    prompt="cancelled secret prompt",
+                    cancelled=True,
+                ),
+                GenerationRequest(model="fake-batched-model", prompt="second active"),
+            ]
+        )
+        await backend.close()
+        return responses, backend.batch_metrics_snapshot()
+
+    responses, metrics = asyncio.run(run_batch())
+
+    assert responses == [
+        "fake-batched-model response to first active",
+        "fake-batched-model response to second active",
+    ]
+    assert metrics == {
+        "model": "fake-batched-model",
+        "batches_total": 1,
+        "requests_total": 2,
+        "max_active_batch_size": 2,
+        "queue_wait_ms_total": 2,
+        "prefill_tokens_total": 4,
+        "decode_tokens_total": 10,
+        "cache_hits_total": 0,
+        "cache_misses_total": 2,
+        "cache_saved_tokens_total": 0,
+        "cancelled_requests_total": 1,
+        "batch_observations": [
+            {
+                "active_batch_size": 2,
+                "cache_hits": 0,
+                "cache_misses": 2,
+                "prefill_tokens": 4,
+                "decode_tokens": 10,
+                "cache_saved_tokens": 0,
+                "cancelled_requests": 1,
+            }
+        ],
+    }
+    assert "cancelled secret prompt" not in repr(metrics)

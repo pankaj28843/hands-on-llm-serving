@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 class GenerationRequest:
     model: str
     prompt: str
+    cancelled: bool = False
 
 
 @dataclass
@@ -43,22 +44,26 @@ class FakeBatchedBackend:
         if any(request.model != self.model_id for request in requests):
             raise ValueError("All fake batch requests must use the backend model")
 
-        active_batch_size = len(requests)
-        cache_hits = sum(1 for request in requests if request.prompt in self._cache)
+        active_requests = [request for request in requests if not request.cancelled]
+        cancelled_requests = len(requests) - len(active_requests)
+        active_batch_size = len(active_requests)
+        cache_hits = sum(
+            1 for request in active_requests if request.prompt in self._cache
+        )
         cache_misses = active_batch_size - cache_hits
         prefill_tokens = sum(
             len(request.prompt.split())
-            for request in requests
+            for request in active_requests
             if request.prompt not in self._cache
         )
         cache_saved_tokens = sum(
             len(request.prompt.split())
-            for request in requests
+            for request in active_requests
             if request.prompt in self._cache
         )
         decode_tokens = sum(
             len(_fake_response(self.model_id, request.prompt).split())
-            for request in requests
+            for request in active_requests
         )
 
         self._metrics.batches_total += 1
@@ -72,6 +77,7 @@ class FakeBatchedBackend:
         self._metrics.cache_hits_total += cache_hits
         self._metrics.cache_misses_total += cache_misses
         self._metrics.cache_saved_tokens_total += cache_saved_tokens
+        self._metrics.cancelled_requests_total += cancelled_requests
         self._metrics.batch_observations.append(
             {
                 "active_batch_size": active_batch_size,
@@ -80,11 +86,12 @@ class FakeBatchedBackend:
                 "prefill_tokens": prefill_tokens,
                 "decode_tokens": decode_tokens,
                 "cache_saved_tokens": cache_saved_tokens,
+                "cancelled_requests": cancelled_requests,
             }
         )
 
         responses = []
-        for request in requests:
+        for request in active_requests:
             self._cache.add(request.prompt)
             responses.append(_fake_response(self.model_id, request.prompt))
         return responses
