@@ -12,6 +12,7 @@ The repo currently has:
 - a minimal API `Dockerfile`
 - tests that validate the Compose file with `docker compose config`
 - one local E2E proof run of the Docker-built fake-backend API stack
+- one `vllm-mlx` standalone smoke with a downloaded MLX model
 
 The Apple Silicon backend is intentionally native and gated. It is not a
 Compose service yet. The first candidate is `vllm-mlx`, but it must pass model
@@ -69,6 +70,41 @@ Open WebUI root reachability is proven; its backend API probes returned `401`
 for unauthenticated direct curl calls. A browser workflow or authenticated API
 contract is still needed before claiming Open WebUI chat workflow integration.
 
+## vllm-mlx Standalone Smoke
+
+A native `vllm-mlx standalone smoke` also passed outside the project API
+container:
+
+```bash
+uv tool install --python 3.12 vllm-mlx
+HF_HOME="$PWD/model-cache/huggingface" \
+  vllm-mlx download mlx-community/Qwen3-0.6B-8bit
+HF_HOME="$PWD/model-cache/huggingface" \
+  vllm-mlx serve mlx-community/Qwen3-0.6B-8bit \
+  --served-model-name mlx-qwen3-0.6b-8bit \
+  --host 127.0.0.1 \
+  --port 8100 \
+  --max-request-tokens 128 \
+  --max-tokens 64 \
+  --max-num-seqs 2 \
+  --cache-memory-mb 512 \
+  --continuous-batching \
+  --stream-interval 1 \
+  --enable-metrics
+```
+
+The saved evidence bundle is under:
+
+```text
+artifacts/runtime/2026-06-28T151600+0200-vllm-mlx/
+```
+
+The proof includes install/import/version output for `vllm-mlx` 0.3.0 and MLX
+0.31.2, MLX GPU device detection, ignored Hugging Face cache use under
+`model-cache/`, a preflight under the 24 GiB local ceiling, model download,
+`/v1/models`, non-streaming chat, streaming chat, and `/metrics`. The native
+server was stopped after the smoke to free local memory.
+
 ## Still Not Complete
 
 The local E2E proof is intentionally narrower than production readiness. These
@@ -80,8 +116,8 @@ claims are not complete yet:
 - Open WebUI model listing and chat smoke proof through its UI/API workflow
 - model-cache policy under ignored `model-cache/`
 - runtime artifacts under ignored `artifacts/runtime/`
-- Apple Silicon backend startup
-- real model download and inference
+- project API integration for the Apple Silicon backend
+- cancellation, benchmark, and Phoenix trace proof for the real backend
 
 `secrets/`, `model-cache/`, traces, logs, raw benchmarks, database files, and
 runtime artifacts must stay out of git.
@@ -99,4 +135,4 @@ Open WebUI connects to the local OpenAI-compatible API. In Compose, it uses
 API process, use the appropriate host URL.
 
 The API service is still safe to import and test without Docker, PostgreSQL,
-Phoenix, Open WebUI, or model downloads.
+Phoenix, Open WebUI, `vllm-mlx`, or model downloads.

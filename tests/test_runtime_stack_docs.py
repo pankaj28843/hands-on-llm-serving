@@ -17,6 +17,8 @@ def test_runtime_stack_docs_define_static_and_runtime_boundaries() -> None:
         "PostgreSQL",
         "Phoenix",
         "Open WebUI",
+        "vllm-mlx standalone smoke",
+        "artifacts/runtime/2026-06-28T151600+0200-vllm-mlx/",
         "Apple Silicon backend",
         "not complete",
     ):

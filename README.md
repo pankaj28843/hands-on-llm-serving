@@ -54,9 +54,12 @@ Evidence is saved under the ignored
 
 This is not yet full production proof: PostgreSQL migrations/persistence,
 Phoenix trace export, Open WebUI chat workflow integration, real-model Apple
-Silicon backend proof, MkDocs, cluster routing, and release/no-leak checks are
-still pending. Local secret files belong under ignored `secrets/` paths and
-must not be committed.
+Silicon backend integration, MkDocs, cluster routing, and release/no-leak
+checks are still pending. A standalone `vllm-mlx` smoke did pass with
+`mlx-community/Qwen3-0.6B-8bit` on port 8100, including model download,
+`/v1/models`, chat, streaming, and `/metrics`; evidence is saved under ignored
+`artifacts/runtime/2026-06-28T151600+0200-vllm-mlx/`. Local secret files belong
+under ignored `secrets/` paths and must not be committed.
 
 See `docs/runtime-stack.md` for the static-vs-runtime boundary before running
 any Docker services.
