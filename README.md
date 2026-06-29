@@ -52,8 +52,12 @@ collisions with common developer services.
 Evidence is saved under the ignored
 `artifacts/runtime/2026-06-28T145945+0200-e2e/` bundle.
 
-This is not yet full production proof: fuller benchmark qualification, MkDocs,
-cluster routing, and release/no-leak checks are still pending.
+This is not full production certification. MacBook proof, fake-backend Docker
+proof, Open WebUI proof, Phoenix tracing, MkDocs, release/no-leak checks, and
+benchmark structure are complete for local learning. The test-double cluster
+routing contract is code-backed, but real multi-node proof is still required
+before any Mac Studio cluster claim. Mac Studio cluster capacity, failover, and
+multi-user performance remain pending until real cluster evidence exists.
 PostgreSQL persistence now has
 SQLAlchemy/Alembic code and a local migration plus sample insert/read proof
 under ignored `artifacts/runtime/2026-06-28T154545+0200-postgres-persistence/`.

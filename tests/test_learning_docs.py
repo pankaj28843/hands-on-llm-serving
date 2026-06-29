@@ -133,6 +133,29 @@ def test_readme_points_to_current_native_openwebui_answer_proof() -> None:
     assert "limited visible answer text" not in readme
 
 
+def test_readme_honesty_boundary_matches_current_release_status() -> None:
+    readme = " ".join(_read("README.md").split())
+
+    for stale in (
+        "fuller benchmark qualification, MkDocs, cluster routing, and "
+        "release/no-leak checks are still pending",
+        "MkDocs, cluster routing, and release/no-leak checks are still pending",
+        "release/no-leak checks are still pending",
+    ):
+        assert stale not in readme
+
+    for required in (
+        "MacBook proof, fake-backend Docker proof, Open WebUI proof, "
+        "Phoenix tracing, MkDocs, release/no-leak checks, and benchmark "
+        "structure are complete for local learning",
+        "Mac Studio cluster capacity, failover, and multi-user performance "
+        "remain pending until real cluster evidence exists",
+        "test-double cluster routing contract is code-backed",
+        "real multi-node proof",
+    ):
+        assert required in readme
+
+
 def test_mkdocs_is_declared_as_dev_dependency() -> None:
     pyproject = _read("pyproject.toml")
 
