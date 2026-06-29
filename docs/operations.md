@@ -36,12 +36,6 @@ curl -fsS http://localhost:26006/ >/dev/null
 
 ## Open WebUI
 
-Version/source-surface: local `docsearch` tenant `openwebui` from
-`https://docs.openwebui.com`, fetched pages `OpenAI-Compatible / Open WebUI`,
-`Environment Variable Configuration / Open WebUI`, and
-`API Endpoints / Open WebUI`; local image version is `main`, so runtime smoke
-evidence is required before claiming workflow compatibility.
-
 Compose starts Open WebUI with environment-owned local configuration:
 
 ```text
@@ -93,15 +87,9 @@ assistant text. The acceptance check is browser-visible: the answer must render
 in Open WebUI and the direct backend/API response must show that
 `finish_reason` is not `length`.
 
-Saved Open WebUI proof bundles:
-
-- `artifacts/runtime/2026-06-28T163030+0200-open-webui/`
-- `artifacts/runtime/2026-06-28T174936+0200-open-webui-native-backend/`
-- `artifacts/runtime/2026-06-28T195945+0200-open-webui-visible-answer-no-think/`
-
 ## Phoenix
 
-Compose exports traces to:
+Compose exports OpenTelemetry traces to:
 
 ```text
 MAC_LLM_OPS_OTEL_ENABLED=true
@@ -120,11 +108,10 @@ uv run uvicorn mac_llm_ops_lab.cli:app --host 127.0.0.1 --port 28020
 
 Default telemetry does not capture prompts, completions, request bodies, HTTP
 headers, API keys, exception messages, local file paths, or model-cache paths.
-See [Evidence](evidence.md) for the runtime proof bundles and prompt-safety
-contract.
+Keep any exported traces under ignored local runtime artifacts and publish only
+sanitized summaries.
 
 ## Safety
 
-Never commit local secrets, model caches, runtime evidence, database files,
-logs, traces, or raw benchmark payloads. Keep those under ignored directories
-and summarize only publish-safe evidence in docs.
+Never commit local secrets, model caches, runtime artifacts, database files,
+logs, traces, or raw benchmark payloads. Keep those under ignored directories.

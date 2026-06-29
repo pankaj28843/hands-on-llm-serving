@@ -186,8 +186,6 @@ def test_open_webui_docs_describe_compose_and_host_connection_contract() -> None
     text_flat = " ".join(text.split())
 
     for required in (
-        "Version/source-surface",
-        "https://docs.openwebui.com",
         "OPENAI_API_BASE_URLS=http://api:8000/v1",
         "OPENAI_API_KEYS=local-dev-placeholder",
         "WEBUI_AUTH=False",
@@ -203,8 +201,6 @@ def test_open_webui_docs_describe_compose_and_host_connection_contract() -> None
         "temperature",
         "max_completion_tokens",
         "Do not commit real provider keys",
-        "artifacts/runtime/2026-06-28T163030+0200-open-webui/",
-        "artifacts/runtime/2026-06-28T174936+0200-open-webui-native-backend/",
         "visible final answer",
         "`finish_reason` is not `length`",
         "VLLM_MLX_MAX_TOKENS=512",
@@ -212,11 +208,11 @@ def test_open_webui_docs_describe_compose_and_host_connection_contract() -> None
         "VLLM_MLX_REASONING_PARSER=qwen3",
         "`delta.reasoning_content`",
         "non-empty `delta.content` chunks",
-        "artifacts/runtime/2026-06-28T195945+0200-open-webui-visible-answer-no-think/",
     ):
         assert required in text_flat
 
     assert "little visible final-answer text" not in text_flat
+    assert "artifacts/runtime/2026-" not in text_flat
 
 
 def _shell_default(script: str, name: str) -> int:

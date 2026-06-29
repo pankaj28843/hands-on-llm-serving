@@ -73,13 +73,6 @@ cache_root: model-cache/huggingface
 estimated_runtime_total_gib: 4.7
 ```
 
-Version/source-surface:
-
-- `https://huggingface.co/docs/transformers/en/model_sharing/`
-- `https://huggingface.co/docs/datasets/en/cache/`
-- `https://huggingface.co/mlx-community/Qwen3-0.6B-8bit`
-- primary `vllm-mlx` package metadata
-
 The CPU-safe gate denies by default with `runtime_not_authorized`:
 
 ```bash

@@ -1,5 +1,5 @@
 site_name: Mac LLM Ops Lab
-site_description: Mac-first LLM serving lab with production-style evidence.
+site_description: Mac-first LLM serving lab for Apple Silicon.
 repo_url: https://github.com/pankaj28843/mac-llm-ops-lab
 docs_dir: docs
 site_dir: site
@@ -18,6 +18,5 @@ nav:
   - Design: design.md
   - Development: development.md
   - Operations: operations.md
-  - Evidence: evidence.md
   - Mac Studio Cluster: mac-studio-cluster.md
   - Release Readiness: release-readiness.md

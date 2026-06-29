@@ -6,7 +6,7 @@ Mac-first LLM serving lab for learning production serving patterns on Apple
 Silicon. The project is built around a FastAPI OpenAI-compatible API, a
 CPU-safe fake backend, a gated native `vllm-mlx` backend path, PostgreSQL
 persistence, Phoenix/OpenTelemetry traces, Open WebUI, MkDocs, and saved
-runtime evidence.
+local validation.
 
 - Published docs: <https://pankaj28843.github.io/mac-llm-ops-lab/>
 - GitHub repo: <https://github.com/pankaj28843/mac-llm-ops-lab>
@@ -19,16 +19,13 @@ traces, secrets, database files, logs, or private benchmark payloads.
 
 ## Current Boundary
 
-This is not full production certification. MacBook proof, fake-backend Docker
-proof, Open WebUI proof, Phoenix tracing, MkDocs, release/no-leak checks, and
-benchmark structure are complete for local learning. The test-double cluster
-routing contract is code-backed, but real multi-node proof is still required
-before any Mac Studio cluster claim. Mac Studio cluster capacity, failover, and
-multi-user performance remain pending until real cluster evidence exists.
-
-The native proofs are still not production UX or performance benchmarks. The
-current Qwen3/Open WebUI operator path does prove a visible assistant answer:
-`artifacts/runtime/2026-06-28T195945+0200-open-webui-visible-answer-no-think/`.
+This is not full production certification. The fake-backend API, local Docker
+stack, Open WebUI path, Phoenix tracing, MkDocs site, release/no-leak checks,
+and benchmark structure are complete for local learning. The test-double
+cluster routing contract is code-backed, but real multi-node proof is still
+required before any Mac Studio cluster claim. Mac Studio cluster capacity,
+failover, and multi-user performance remain pending until real cluster
+validation exists.
 
 ## Quick Start
 
@@ -80,11 +77,6 @@ starts are gated by `mac_llm_ops_lab.model_catalog`,
 `MAC_LLM_OPS_MODEL_DOWNLOAD_APPROVED=true`, a passing 24 GiB memory preflight, and the
 ignored cache policy.
 
-Runtime evidence uses `mac_llm_ops_lab.runtime_artifacts` to label git SHA,
-command, host, backend, model, artifact directory, log path, runtime config, and
-ports. Evidence manifests and bundle indexes stay under ignored
-`artifacts/runtime/`.
-
 ## Native Backend Smoke
 
 Start the approved small MLX model with enough Qwen3 budget for a visible Open
@@ -110,19 +102,14 @@ API_PORT=28020 \
 scripts/run-model-backed-api.sh
 ```
 
-The saved model-backed API evidence covers `/live`, `/ready`, `/v1/models`,
-non-streaming chat, streaming chat, `/metrics/snapshot`, backend metrics, and
-Phoenix spans:
-
-- `artifacts/runtime/2026-06-28T153000+0200-model-backed-api-e2e/`
-- `artifacts/runtime/2026-06-28T173605+0200-vllm-mlx-phoenix-real-backend/`
-- `artifacts/runtime/2026-06-28T174936+0200-open-webui-native-backend/`
+Use `/live`, `/ready`, `/v1/models`, `/v1/chat/completions`, streaming chat,
+`/metrics/snapshot`, backend metrics, and Phoenix spans to validate a local
+run.
 
 ## Docs Map
 
 - [Development](docs/development.md): setup, validation, native backend starts.
 - [Operations](docs/operations.md): Docker, Open WebUI, and Phoenix runbook.
-- [Design](docs/design.md): architecture, request, and evidence diagrams.
-- [Evidence](docs/evidence.md): runtime proofs, persistence, telemetry, and benchmarks.
+- [Design](docs/design.md): architecture, request, and validation diagrams.
 - [Mac Studio Cluster](docs/mac-studio-cluster.md): unsupported cluster claims.
 - [Release Readiness](docs/release-readiness.md): public repo and no-leak gate.

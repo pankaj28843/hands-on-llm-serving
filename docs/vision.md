@@ -7,8 +7,7 @@ the tradeoffs behind production serving.
 
 The project now stands on its own as a Mac-first lab. External references are
 treated as reference-only background; the implementation, naming, docs, and
-runtime evidence are specific to this repository's Apple Silicon operating
-model.
+validation path are specific to this repository's Apple Silicon operating model.
 
 ## What This Lab Should Teach
 

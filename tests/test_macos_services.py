@@ -184,15 +184,20 @@ def test_launchd_service_bundle_cli_writes_artifacts(
     assert (tmp_path / "artifacts/runtime/test-launchd/launchd-manifest.json").exists()
 
 
-def test_mac_studio_cluster_docs_describe_launchd_generation() -> None:
+def test_mac_studio_cluster_docs_keep_launchd_generation_internal() -> None:
     text = Path("docs/mac-studio-cluster.md").read_text(encoding="utf-8")
 
-    for required in (
+    for internal in (
         "macos-launchd-service-bundle/v1",
         "python -m mac_llm_ops_lab.macos_services generate",
         "launchd-manifest.json",
         "plutil -lint",
-        "generate only",
-        "does not install or load",
+    ):
+        assert internal not in text
+
+    for required in (
+        "private Mac Studio LAN",
+        "native `vllm-mlx` backend",
+        "OpenAI-compatible API surface",
     ):
         assert required in text

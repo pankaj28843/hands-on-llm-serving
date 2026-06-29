@@ -18,4 +18,4 @@ lab. Keep this file short; use the served docs for detail.
   files, logs, traces, or raw benchmark payloads.
 - Treat external examples and source material as reference-only; do not copy
   code or prose into this repo without an explicit, reviewed change.
-- Prefer tests and saved runtime evidence over chat memory.
+- Prefer tests and local validation artifacts over chat memory.

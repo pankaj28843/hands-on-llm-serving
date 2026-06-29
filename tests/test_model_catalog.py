@@ -110,10 +110,6 @@ def test_model_catalog_docs_describe_approval_and_source_evidence() -> None:
     text = Path("docs/development.md").read_text(encoding="utf-8")
 
     for required in (
-        "Version/source-surface",
-        "https://huggingface.co/docs/transformers/en/model_sharing/",
-        "https://huggingface.co/docs/datasets/en/cache/",
-        "https://huggingface.co/mlx-community/Qwen3-0.6B-8bit",
         "vllm-mlx",
         "MAC_LLM_OPS_MODEL_DOWNLOAD_APPROVED=true",
         "runtime_not_authorized",

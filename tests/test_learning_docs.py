@@ -61,11 +61,10 @@ def test_mkdocs_config_serves_lean_learning_docs_nav() -> None:
         "design.md",
         "development.md",
         "operations.md",
-        "evidence.md",
         "mac-studio-cluster.md",
         "release-readiness.md",
     ]
-    assert len(pages) <= 9
+    assert len(pages) <= 8
     for page in pages:
         assert (DOCS_DIR / page).exists()
 
@@ -83,7 +82,6 @@ def test_learning_docs_cover_clone_and_run_path_without_private_paths() -> None:
         "design.md",
         "development.md",
         "operations.md",
-        "evidence.md",
         "mac-studio-cluster.md",
         "release-readiness.md",
     ):
@@ -108,9 +106,8 @@ def test_learning_docs_cover_clone_and_run_path_without_private_paths() -> None:
         "vllm-mlx",
         "mlx-community/Qwen3-0.6B-8bit",
         "Mac Studio",
-        "Do not extrapolate",
-        "Repository",
-        "Unit of Work",
+        "cannot prove Mac Studio",
+        "model catalog",
         "mermaid",
         "independent Mac-first learning lab",
         "reference-only background",
@@ -128,6 +125,8 @@ def test_learning_docs_cover_clone_and_run_path_without_private_paths() -> None:
         "secrets/postgres_password.txt contains",
         "HF_TOKEN",
         "OPENAI_API_KEY=",
+        "/evidence/",
+        "evidence.md",
     )
     for forbidden in forbidden_fragments:
         assert forbidden not in public_learning_docs
@@ -163,7 +162,7 @@ def test_markdown_local_links_resolve() -> None:
             assert resolved.exists(), f"{path} links to missing {raw_target}"
 
 
-def test_readme_points_to_current_native_openwebui_answer_proof() -> None:
+def test_readme_keeps_native_openwebui_run_commands_without_artifact_index() -> None:
     readme = _read("README.md")
 
     for required in (
@@ -171,12 +170,14 @@ def test_readme_points_to_current_native_openwebui_answer_proof() -> None:
         "VLLM_MLX_MAX_REQUEST_TOKENS=1024",
         "VLLM_MLX_REASONING_PARSER=qwen3",
         "VLLM_MLX_DEFAULT_CHAT_TEMPLATE_KWARGS='{\"enable_thinking\": false}'",
-        "artifacts/runtime/2026-06-28T195945+0200-open-webui-visible-answer-no-think/",
-        "visible assistant answer",
+        "MAC_LLM_OPS_BACKEND_KIND=openai-compatible",
+        "API_PORT=28020",
     ):
         assert required in readme
 
     assert "limited visible answer text" not in readme
+    assert "artifacts/runtime/2026-" not in readme
+    assert "docs/evidence.md" not in readme
 
 
 def test_readme_points_to_published_docs_and_current_docs_map() -> None:
@@ -191,7 +192,6 @@ def test_readme_points_to_published_docs_and_current_docs_map() -> None:
         "docs/development.md",
         "docs/operations.md",
         "docs/design.md",
-        "docs/evidence.md",
         "docs/mac-studio-cluster.md",
         "docs/release-readiness.md",
         "real multi-node proof",

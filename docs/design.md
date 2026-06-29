@@ -13,7 +13,7 @@ observability separated.
   adapter.
 - Observability is app-local and explicit: importing the ASGI app does not start
   exporters, connect to Phoenix, or download models.
-- Runtime artifacts are structured evidence bundles, not source files.
+- Runtime artifacts are local validation outputs, not source files.
 
 <div class="mermaid">
 flowchart LR
@@ -25,7 +25,7 @@ flowchart LR
   API --> DB["PostgreSQL metadata"]
   API --> OTel["OpenTelemetry spans"]
   OTel --> Phoenix["Phoenix"]
-  API --> Evidence["artifacts/runtime evidence"]
+  API --> Runtime["local runtime artifacts"]
 </div>
 
 ## Request Flow
@@ -52,20 +52,20 @@ host process reached through the OpenAI-compatible adapter. That keeps Apple
 GPU execution outside the API container while the Docker stack still provides
 PostgreSQL, Phoenix, Open WebUI, and the API service.
 
-## Evidence Boundary
+## Validation Boundary
 
-Code changes need tests. Runtime claims need saved evidence. Performance claims
-need benchmark workload policy, raw rows, summaries, backend metrics, Phoenix
-spans, and publish-safety scans. A MacBook baseline can guide the plan, but it
-cannot prove Mac Studio cluster behavior.
+Code changes need tests. Runtime claims need local validation. Performance
+claims need benchmark workload policy, backend metrics, traces, and
+publish-safety scans. A MacBook baseline can guide the plan, but it cannot
+prove Mac Studio cluster behavior.
 
 <div class="mermaid">
 flowchart TB
   Change["code or runtime change"] --> Tests["pytest and ruff"]
   Change --> Runtime["local runtime proof"]
-  Runtime --> Bundle["ignored artifacts/runtime bundle"]
+  Runtime --> Bundle["ignored local artifact"]
   Bundle --> Scan["public-release scan"]
-  Tests --> Claim["supported docs claim"]
+  Tests --> Claim["supported claim"]
   Scan --> Claim
   Claim --> Boundary["explicit unsupported claims"]
 </div>

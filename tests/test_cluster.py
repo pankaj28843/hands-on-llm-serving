@@ -182,17 +182,13 @@ def test_mac_studio_cluster_docs_describe_code_backed_contracts() -> None:
 
     for required in (
         "mac_llm_ops_lab.cluster",
-        "ClusterNode",
         "route_to_model",
-        "cluster-evidence-manifest/v1",
         "least_queue_depth",
         "no_healthy_registered_node",
-        "api_log",
-        "backend_log",
-        "phoenix_spans",
-        "metrics",
         "20000-50000",
-        "API and backend base URLs",
         "real multi-node proof",
     ):
         assert required in text
+
+    assert "cluster-evidence-manifest/v1" not in text
+    assert "mac-studio-node-evidence/v1" not in text

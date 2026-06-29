@@ -520,73 +520,41 @@ def test_probe_script_generates_backend_contract_report() -> None:
     assert "backend-contract-report.json" in script
 
 
-def test_backend_contract_docs_describe_metrics_and_benchmark_boundaries() -> None:
-    text = Path("docs/evidence.md").read_text(encoding="utf-8")
+def test_public_docs_keep_benchmark_boundary_without_artifact_index() -> None:
+    text = "\n".join(
+        Path(path).read_text(encoding="utf-8")
+        for path in (
+            "README.md",
+            "docs/release-readiness.md",
+            "docs/mac-studio-cluster.md",
+        )
+    )
     text_flat = " ".join(text.split())
 
     for required in (
-        "vllm_mlx_http_requests_total",
-        "vllm_mlx_metal_memory_bytes",
-        "vllm-mlx bench-serve",
-        "validated:false",
-        "Open WebUI native-backend proof",
-        "cannot support quality, UX, latency, throughput, cost, or Mac Studio",
+        "benchmark structure",
+        "Backend contract tests",
+        "Mac Studio cluster capacity",
+        "real multi-node proof",
     ):
         assert required in text_flat
 
+    assert "docs/evidence.md" not in text
+    assert "artifacts/runtime/2026-" not in text
 
-def test_backend_contract_docs_define_representative_benchmark_policy() -> None:
-    text = Path("docs/evidence.md").read_text(encoding="utf-8")
+
+def test_public_docs_define_mac_studio_extrapolation_boundary() -> None:
+    text = Path("docs/mac-studio-cluster.md").read_text(encoding="utf-8")
     text_flat = " ".join(text.split())
 
     for required in (
-        "Benchmark Workload Policy",
-        "benchmark-artifact-manifest.json",
-        "raw_benchmark_path",
-        "summary_path",
-        "no_leak_scan",
-        "smoke_short",
-        "conversational_sharegpt",
-        "prefix_repetition_cache",
-        "warmup",
-        "repetitions",
-        "TTFT",
-        "TPOT",
-        "ITL",
-        "request throughput",
-        "Metal memory",
-        "Phoenix GenAI spans",
-        "input token distribution",
-        "output token target",
-        "local development baseline",
-        "Mac Studio cluster claims require Mac Studio runs",
-        "validated:false is smoke-only",
-        "2026-06-28T183228+0200-slice15-macbook-benchmark",
-        "production_performance_claim_supported: false",
-        "20000-50000",
-    ):
-        assert required in text_flat
-
-
-def test_backend_contract_docs_define_mac_studio_extrapolation_boundary() -> None:
-    text = Path("docs/evidence.md").read_text(encoding="utf-8")
-    text_flat = " ".join(text.split())
-
-    for required in (
-        "MacBook To Mac Studio Boundary",
-        "Do not extrapolate",
-        "Measured on this MacBook Pro",
-        "node count",
+        "does not prove Mac Studio cluster capacity",
+        "Node count",
         "chip generation",
         "unified memory",
-        "network topology",
+        "Network topology",
         "routing policy",
-        "same model revision",
-        "same benchmark workload policy",
-        "routed-cluster spans",
-        "cluster throughput",
-        "cluster latency",
-        "capacity planning",
-        "failover behavior",
+        "20000-50000",
+        "real multi-node proof",
     ):
         assert required in text_flat

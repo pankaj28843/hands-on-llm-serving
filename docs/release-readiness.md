@@ -34,14 +34,14 @@ source.
 
 ## Claim Checklist
 
-| Claim | Evidence |
+| Claim | Validation |
 | --- | --- |
-| Fake-backend API works in tests and Docker Compose. | `uv run pytest`; `docs/evidence.md`; saved Docker E2E evidence. |
-| PostgreSQL persistence is code-backed. | `tests/test_persistence_*`; `docs/evidence.md`; Alembic migration proof. |
-| Phoenix/OpenTelemetry is prompt-safe by default. | `tests/test_observability.py`; `docs/evidence.md`; Phoenix proof bundles. |
-| Open WebUI reaches the API. | `tests/test_open_webui_integration.py`; `docs/operations.md`; browser evidence bundles. |
-| `vllm-mlx` can run the approved small MLX model locally. | `docs/development.md`; model catalog gate; runtime proof bundles. |
-| MacBook benchmark baseline exists. | `docs/evidence.md`; local benchmark bundle. |
+| Fake-backend API works in tests and Docker Compose. | `uv run pytest`; Compose config validation. |
+| PostgreSQL persistence is code-backed. | `tests/test_persistence_*`; Alembic migration tests. |
+| Phoenix/OpenTelemetry is prompt-safe by default. | `tests/test_observability.py`; `docs/operations.md`. |
+| Open WebUI reaches the API. | `tests/test_open_webui_integration.py`; `docs/operations.md`. |
+| `vllm-mlx` can run the approved small MLX model locally. | `docs/development.md`; model catalog gate. |
+| MacBook benchmark baseline exists. | Backend contract tests and local benchmark artifacts. |
 | Mac Studio cluster readiness is not claimed. | `docs/mac-studio-cluster.md`; real multi-node proof remains pending. |
 
 ## Do Not Publish
@@ -75,8 +75,8 @@ reviewed license basis.
 
 ## Current Honesty Boundary
 
-This repo is production-style and evidence-driven, not production-certified.
+This repo is production-style and validation-driven, not production-certified.
 MacBook proof, fake-backend Docker proof, Open WebUI proof, Phoenix tracing,
 and benchmark structure are complete for local learning. Mac Studio cluster
 capacity, failover, and multi-user performance remain pending until real
-cluster evidence exists.
+cluster validation exists.

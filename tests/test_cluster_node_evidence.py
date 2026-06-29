@@ -238,15 +238,21 @@ def test_node_evidence_cli_writes_sorted_json_under_runtime_artifacts(
     )
 
 
-def test_mac_studio_cluster_docs_describe_node_evidence_capture() -> None:
+def test_mac_studio_cluster_docs_keep_node_capture_internals_out() -> None:
     text = Path("docs/mac-studio-cluster.md").read_text(encoding="utf-8")
 
     for required in (
+        "20000-50000",
+        "real multi-node proof",
+        "Node count",
+        "Open WebUI UX behavior",
+    ):
+        assert required in text
+
+    for internal in (
         "mac-studio-node-evidence/v1",
         "python -m mac_llm_ops_lab.cluster node-evidence",
         "node-evidence.json",
-        "20000-50000",
         "requires_real_multi_node_proof",
-        "does not complete real multi-node proof",
     ):
-        assert required in text
+        assert internal not in text

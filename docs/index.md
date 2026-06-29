@@ -2,8 +2,8 @@
 
 This repository is an independent Mac-first learning lab for production-style
 LLM serving. It focuses on macOS, Apple Silicon, future Mac Studio clusters,
-and saved runtime evidence rather than copying third-party naming, source
-material, or vendor-specific deployment shape.
+and local validation rather than copying third-party naming, source material,
+or vendor-specific deployment shape.
 
 ## Learning Path
 
@@ -14,11 +14,9 @@ material, or vendor-specific deployment shape.
    Compose validation.
 5. Follow [Operations](operations.md) to run the local Docker stack on high
    local ports.
-6. Use [Evidence](evidence.md) to connect API calls to model runtime behavior,
-   Phoenix traces, persistence, benchmark evidence, and publish-safety scans.
-7. Read [Mac Studio Cluster](mac-studio-cluster.md) before making any cluster
+6. Read [Mac Studio Cluster](mac-studio-cluster.md) before making any cluster
    claim.
-8. Run [Release Readiness](release-readiness.md) before publishing or handing
+7. Run [Release Readiness](release-readiness.md) before publishing or handing
    the repo to someone else.
 
 ## Clone And Run
