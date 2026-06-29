@@ -1,9 +1,9 @@
 # Benchmarks
 
-Benchmarking is evidence collection, not decoration. The book's applied
-optimization flow emphasizes hardware inspection, representative traffic,
-explicit metrics, service setup, repeated runs, and tradeoff analysis. This
-repo encodes that into workload policy and artifact manifests.
+Benchmarking is evidence collection, not decoration. The lab emphasizes
+hardware inspection, representative traffic, explicit metrics, service setup,
+repeated runs, and tradeoff analysis. Those rules are encoded as workload
+policy and artifact manifests.
 
 ## Required Signals
 

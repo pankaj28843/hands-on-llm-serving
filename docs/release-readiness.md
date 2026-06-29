@@ -61,9 +61,7 @@ Do not publish or commit:
 - local converted book trees outside this repository
 - real provider keys, Hugging Face tokens, cookies, JWTs, or SSH keys
 
-The public repo may mention the source URL and the reference repository, but it
-must not vendor book text, purchased EPUB files, model weights, local traces, or
-machine-local paths.
+The public repo should stand on its own. Do not brand the project after an external source title; do not vendor book text, purchased EPUB files, companion-repo code, model weights, local traces, or machine-local paths.
 
 ## external source Copyright Guard
 

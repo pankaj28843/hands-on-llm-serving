@@ -55,9 +55,9 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         values["otel_capture_content"] = _parse_bool(otel_capture_content)
     if otel_timeout_seconds := source.get("MAC_LLM_OPS_OTEL_EXPORT_TIMEOUT_SECONDS"):
         values["otel_export_timeout_seconds"] = float(otel_timeout_seconds)
-    if phoenix_project_name := source.get("MAC_LLM_OPS_PHOENIX_PROJECT_NAME") or source.get(
-        "PHOENIX_PROJECT_NAME"
-    ):
+    if phoenix_project_name := source.get(
+        "MAC_LLM_OPS_PHOENIX_PROJECT_NAME"
+    ) or source.get("PHOENIX_PROJECT_NAME"):
         values["phoenix_project_name"] = phoenix_project_name
 
     return Settings(**values)

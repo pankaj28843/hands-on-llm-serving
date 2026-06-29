@@ -96,9 +96,9 @@ def test_learning_docs_cover_clone_and_run_path_without_private_paths() -> None:
         "mlx-community/Qwen3-0.6B-8bit",
         "Mac Studio",
         "Do not extrapolate",
-        "reference repository",
-        "https://www.external_source.com/library/view/mac-llm-ops-lab/9798341621480/",
-        "https://github.com/pankaj28843/mac-llm-ops-lab/",
+        "independent Mac-first learning lab",
+        "reference-only background",
+        "External references",
     ):
         assert required in combined
 
@@ -115,6 +115,16 @@ def test_learning_docs_cover_clone_and_run_path_without_private_paths() -> None:
     )
     for forbidden in forbidden_fragments:
         assert forbidden not in public_learning_docs
+
+    for stale_branding in (
+        "Hands-" + "On LLM Serving",
+        "hands-" + "on-llm-serving",
+        "hands_" + "on_llm_serving",
+        "Mac LLM Ops Lab" + " and Optimization",
+        "https://www.external_source.com/library/" + "view/",
+        "https://github.com/pankaj28843/" + "mac-llm-ops-lab",
+    ):
+        assert stale_branding not in public_learning_docs
 
 
 def test_readme_points_to_current_native_openwebui_answer_proof() -> None:

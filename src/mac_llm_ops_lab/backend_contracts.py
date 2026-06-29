@@ -61,13 +61,13 @@ def build_benchmark_workload_policy() -> dict[str, object]:
     return {
         "schema_version": VLLM_MLX_BENCHMARK_POLICY_SCHEMA_VERSION,
         "source_grounding": [
-            "Mac LLM Ops Lab chapter 9: examine hardware, "
-            "generate representative benchmark traffic, define metrics, verify "
-            "memory/KV cache, then compare baseline, cache, quantized, and "
-            "distributed configurations.",
-            "Mac LLM Ops Lab chapter 4: measure latency and "
-            "throughput with TTFT, ITL/TPOT, end-to-end latency, and request or "
-            "token throughput according to the user-facing workload.",
+            "Mac LLM Ops Lab benchmark policy: examine hardware, generate "
+            "representative traffic, define metrics, verify memory/KV cache, "
+            "then compare baseline, cache, quantized, and distributed "
+            "configurations.",
+            "Mac LLM Ops Lab serving policy: measure latency and throughput "
+            "with TTFT, ITL/TPOT, end-to-end latency, and request or token "
+            "throughput according to the user-facing workload.",
             "OpenTelemetry performance benchmark: use warm-up before measurement, "
             "repeat measurements, and report CPU/memory plus the target platform.",
             "OpenTelemetry GenAI semantic conventions: keep model, provider, "

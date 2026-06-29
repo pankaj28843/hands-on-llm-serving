@@ -187,7 +187,7 @@ def test_benchmark_workload_policy_names_representative_workloads() -> None:
         "prefix_repetition_cache",
     }
     source_grounding = "\n".join(policy["source_grounding"])
-    assert "Mac LLM Ops Lab chapter 9" in source_grounding
+    assert "Mac LLM Ops Lab benchmark policy" in source_grounding
     assert "OpenTelemetry performance benchmark" in source_grounding
 
     production_workloads = [

@@ -69,7 +69,9 @@ def build_macos_launchd_service_bundle(
             "API_HOST": _non_empty_string(api_host, field_name="api_host"),
             "API_PORT": str(ports["api"]),
             "MAC_LLM_OPS_BACKEND_KIND": "openai-compatible",
-            "MAC_LLM_OPS_OPENAI_BASE_URL": (f"http://{backend_host}:{ports['backend']}/v1"),
+            "MAC_LLM_OPS_OPENAI_BASE_URL": (
+                f"http://{backend_host}:{ports['backend']}/v1"
+            ),
             "MAC_LLM_OPS_MODEL_ALLOWLIST": normalized_model_id,
             "MAC_LLM_OPS_OTEL_ENABLED": "true",
             "MAC_LLM_OPS_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": (

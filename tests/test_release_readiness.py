@@ -114,6 +114,8 @@ def test_release_docs_makefile_and_mkdocs_nav_define_validation_path() -> None:
         "Copyright Clearance Center",
         "Membership Agreement",
         "250 words",
+        "Do not brand the project after an external source title",
+        "companion-repo code",
         "no chapter text",
         "no copied copyright notice",
         "no converted book export",

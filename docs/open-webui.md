@@ -123,7 +123,7 @@ on `23000` stayed untouched:
 
 ```bash
 docker run -d \
-  --name mac-llm-ops-open-webui-native-174936 \
+  --name mac_llm_ops-open-webui-native-174936 \
   -p 127.0.0.1:23001:8080 \
   -e ENABLE_PERSISTENT_CONFIG=False \
   -e ENABLE_OLLAMA_API=False \

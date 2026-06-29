@@ -58,7 +58,10 @@ def test_launchd_service_bundle_labels_backend_api_logs_and_high_ports(
         "mlx-community/Qwen3-0.6B-8bit"
     )
     assert backend["EnvironmentVariables"]["VLLM_MLX_PORT"] == "28100"
-    assert backend["EnvironmentVariables"]["MAC_LLM_OPS_MODEL_DOWNLOAD_APPROVED"] == "false"
+    assert (
+        backend["EnvironmentVariables"]["MAC_LLM_OPS_MODEL_DOWNLOAD_APPROVED"]
+        == "false"
+    )
     assert backend["StandardOutPath"].endswith("/backend.out.log")
     assert backend["StandardErrorPath"].endswith("/backend.err.log")
 
@@ -71,8 +74,9 @@ def test_launchd_service_bundle_labels_backend_api_logs_and_high_ports(
     assert api["EnvironmentVariables"]["MAC_LLM_OPS_OPENAI_BASE_URL"] == (
         "http://127.0.0.1:28100/v1"
     )
-    assert api["EnvironmentVariables"]["MAC_LLM_OPS_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"] == (
-        "http://127.0.0.1:26006/v1/traces"
+    assert (
+        api["EnvironmentVariables"]["MAC_LLM_OPS_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"]
+        == "http://127.0.0.1:26006/v1/traces"
     )
 
     assert json.loads(json.dumps(bundle, sort_keys=True)) == bundle
@@ -129,13 +133,18 @@ def test_launchd_service_bundle_writer_persists_plists_and_manifest(
     )
 
     manifest_path = tmp_path / "artifacts/runtime/test-launchd/launchd-manifest.json"
-    backend_plist = tmp_path / "artifacts/runtime/test-launchd/dev.mac_llm_ops.vllm-mlx.plist"
+    backend_plist = (
+        tmp_path / "artifacts/runtime/test-launchd/dev.mac_llm_ops.vllm-mlx.plist"
+    )
     api_plist = tmp_path / "artifacts/runtime/test-launchd/dev.mac_llm_ops.api.plist"
     assert manifest_path.exists()
     assert backend_plist.exists()
     assert api_plist.exists()
     assert json.loads(manifest_path.read_text(encoding="utf-8")) == manifest
-    assert plistlib.loads(backend_plist.read_bytes())["Label"] == "dev.mac_llm_ops.vllm-mlx"
+    assert (
+        plistlib.loads(backend_plist.read_bytes())["Label"]
+        == "dev.mac_llm_ops.vllm-mlx"
+    )
     assert plistlib.loads(api_plist.read_bytes())["Label"] == "dev.mac_llm_ops.api"
     assert (
         manifest["services"]["backend"]["EnvironmentVariables"][

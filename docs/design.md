@@ -29,8 +29,8 @@ need benchmark workload policy, raw rows, summaries, backend metrics, Phoenix
 spans, and publish-safety scans. A MacBook baseline can guide the plan, but it
 cannot prove Mac Studio cluster behavior.
 
-## Book Grounding
+## Reference Boundary
 
-The design follows the book's progression from serving foundations to system
-design, best practices, optimization, frameworks, and applied benchmarking. The
-reference repository remains reference-only.
+External books, examples, and reference repositorysitories are reference-only
+background. This project owns its names, code, docs, tests, evidence format,
+and macOS/Apple Silicon operating boundaries.

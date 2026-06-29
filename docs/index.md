@@ -1,12 +1,9 @@
 # Mac LLM Ops Lab
 
-This repository is a Mac-first learning lab for production LLM serving. It is
-grounded in the external source book
-[Mac LLM Ops Lab](https://www.external_source.com/library/view/mac-llm-ops-lab/9798341621480/)
-and its
-[reference repository](https://github.com/pankaj28843/mac-llm-ops-lab/), but this
-repo is a separate implementation focused on macOS, Apple Silicon, and future
-Mac Studio clusters.
+This repository is an independent Mac-first learning lab for production-style
+LLM serving. It focuses on macOS, Apple Silicon, future Mac Studio clusters,
+and saved runtime evidence rather than copying a source title, reference repository, or
+vendor-specific deployment shape.
 
 ## Learning Path
 

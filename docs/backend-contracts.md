@@ -62,10 +62,9 @@ latency, throughput, Metal memory, cache hits/misses, and validation state.
 
 The machine-readable policy is exposed by
 `mac_llm_ops_lab.backend_contracts.build_benchmark_workload_policy()`.
-It is grounded in the book's benchmark process from chapter 9, the chapter 4
-latency/throughput metric split, and the OpenTelemetry benchmark guidance to
-warm up before measurement, repeat runs, and label the target platform. It also
-keeps GenAI telemetry attributes available in Phoenix evidence.
+It requires latency/throughput separation, warmup before measurement, repeated
+runs, target-platform labels, and GenAI telemetry attributes in Phoenix
+evidence.
 
 Benchmark results must name one of these workloads before any interpretation:
 

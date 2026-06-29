@@ -41,7 +41,9 @@ def _api_service() -> dict[str, object]:
             "MAC_LLM_OPS_OPENAI_BASE_URL": (
                 "${MAC_LLM_OPS_OPENAI_BASE_URL:-http://host.docker.internal:28100/v1}"
             ),
-            "MAC_LLM_OPS_OPENAI_TIMEOUT_SECONDS": "${MAC_LLM_OPS_OPENAI_TIMEOUT_SECONDS:-30}",
+            "MAC_LLM_OPS_OPENAI_TIMEOUT_SECONDS": (
+                "${MAC_LLM_OPS_OPENAI_TIMEOUT_SECONDS:-30}"
+            ),
             "MAC_LLM_OPS_MODEL_ALLOWLIST": "${MAC_LLM_OPS_MODEL_ALLOWLIST:-}",
             "MAC_LLM_OPS_OTEL_ENABLED": "${MAC_LLM_OPS_OTEL_ENABLED:-true}",
             "MAC_LLM_OPS_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": (

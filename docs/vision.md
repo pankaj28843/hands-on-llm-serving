@@ -5,13 +5,10 @@ Silicon. The project should let someone clone the repo, run the fake backend,
 inspect the real-backend path, study the evidence, and build intuition about
 the tradeoffs behind production serving.
 
-The source inspiration is the external source book
-[Mac LLM Ops Lab](https://www.external_source.com/library/view/mac-llm-ops-lab/9798341621480/)
-and its
-[reference repository](https://github.com/pankaj28843/mac-llm-ops-lab/). The book
-frames LLM serving around architecture, caching, scheduling, latency,
-throughput, cost, and measured optimization. This repo adapts those lessons to
-Apple Silicon instead of NVIDIA/Linux-first infrastructure.
+The project now stands on its own as a Mac-first lab. External references are
+treated as reference-only background; the implementation, naming, docs, and
+runtime evidence are specific to this repository's Apple Silicon operating
+model.
 
 ## What This Lab Should Teach
 
