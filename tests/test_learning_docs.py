@@ -156,6 +156,19 @@ def test_readme_honesty_boundary_matches_current_release_status() -> None:
         assert required in readme
 
 
+def test_readme_points_to_published_docs_and_pages_workflow() -> None:
+    readme = _read("README.md")
+
+    for required in (
+        "https://pankaj28843.github.io/mac-llm-ops-lab/",
+        ".github/workflows/pages.yml",
+        "Publish Docs",
+        "uv run mkdocs build --strict",
+        "make validate",
+    ):
+        assert required in readme
+
+
 def test_mkdocs_is_declared_as_dev_dependency() -> None:
     pyproject = _read("pyproject.toml")
 

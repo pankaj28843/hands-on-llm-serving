@@ -1,56 +1,23 @@
 # Mac LLM Ops Lab
 
+[![Publish Docs](https://github.com/pankaj28843/mac-llm-ops-lab/actions/workflows/pages.yml/badge.svg)](https://github.com/pankaj28843/mac-llm-ops-lab/actions/workflows/pages.yml)
+
 Mac-first LLM serving lab for learning production serving patterns on Apple
-Silicon. The first implementation target is a FastAPI service with fake-backend
-tests, then observable local backend adapters and Mac Studio cluster proof.
+Silicon. The project is built around a FastAPI OpenAI-compatible API, a
+CPU-safe fake backend, a gated native `vllm-mlx` backend path, PostgreSQL
+persistence, Phoenix/OpenTelemetry traces, Open WebUI, MkDocs, and saved
+runtime evidence.
 
-This repository does not vendor the book export, local model caches, traces, or
-private benchmark payloads.
+- Published docs: <https://pankaj28843.github.io/mac-llm-ops-lab/>
+- GitHub repo: <https://github.com/pankaj28843/mac-llm-ops-lab>
+- Docs CI/CD: `.github/workflows/pages.yml` (`Publish Docs`) builds `docs/`
+  with `uv run mkdocs build --strict` and deploys the `site/` artifact through
+  GitHub Pages.
 
-## Development
+This repository does not vendor the purchased book export, local model caches,
+traces, secrets, database files, logs, or private benchmark payloads.
 
-The CPU-safe fake-backend ASGI target is:
-
-```text
-mac_llm_ops_lab.cli:app
-```
-
-It builds the FastAPI app with `FakeBatchedBackend`. Importing this target does
-not download models, start Docker, connect to PostgreSQL, emit Phoenix traces,
-or require Open WebUI or Mac Studio cluster services.
-
-Future real-model runtime checks must pass the CPU-safe preflight guard in
-`mac_llm_ops_lab.runtime_guard` first. The guard requires explicit
-authorization and skips plans whose estimated model weights, KV cache, runtime
-overhead, and service overhead exceed the configured memory ceiling. It can also
-build a JSON-safe preflight report for future runtime evidence before any risky
-command runs. Runtime guard tests also enforce the `.gitignore` policy for
-local model caches, traces, raw benchmarks, logs, database files, and artifacts.
-Future runtime runs can use `mac_llm_ops_lab.runtime_artifacts` to build a
-JSON-safe evidence manifest with git SHA, command, host, backend, model,
-artifact directory, and log path labels. Manifest paths must stay under
-`artifacts/runtime/`, logs must stay inside the artifact directory, and required
-runtime labels must be non-empty.
-Execution records combine the preflight report and evidence manifest, exposing
-the final execute/skip state while checking schema versions, boolean decision
-shape, reason codes, manifest labels and paths, and backend/model consistency.
-They can be persisted as sorted JSON under the validated artifact directory for
-future runtime evidence bundles, then loaded back with the same validation
-before downstream proof consumes them.
-Evidence bundles can be indexed deterministically so logs, execution records,
-request samples, metrics, traces, and benchmark files remain under the same
-validated artifact directory. The bundle index can also be persisted as sorted
-JSON beside the execution record.
-
-`mac_llm_ops_lab.runtime_stack.build_local_runtime_stack_plan()` exposes a
-macOS-local topology for API, PostgreSQL, Phoenix, Open WebUI, and a gated
-native Apple Silicon backend path. The Docker-built fake-backend API stack has
-now been run locally with Compose and probed through `/live`, `/ready`,
-`/v1/models`, non-streaming chat, streaming chat, and `/metrics/snapshot`.
-Phoenix and Open WebUI are exposed on high local ports by default to avoid
-collisions with common developer services.
-Evidence is saved under the ignored
-`artifacts/runtime/2026-06-28T145945+0200-e2e/` bundle.
+## Current Boundary
 
 This is not full production certification. MacBook proof, fake-backend Docker
 proof, Open WebUI proof, Phoenix tracing, MkDocs, release/no-leak checks, and
@@ -58,30 +25,70 @@ benchmark structure are complete for local learning. The test-double cluster
 routing contract is code-backed, but real multi-node proof is still required
 before any Mac Studio cluster claim. Mac Studio cluster capacity, failover, and
 multi-user performance remain pending until real cluster evidence exists.
-PostgreSQL persistence now has
-SQLAlchemy/Alembic code and a local migration plus sample insert/read proof
-under ignored `artifacts/runtime/2026-06-28T154545+0200-postgres-persistence/`.
-OpenTelemetry instrumentation is now code-backed for HTTP request spans,
-scheduler dispatch, backend generation, streaming errors/tokens, and
-SQLAlchemy Unit of Work transaction spans. Telemetry remains disabled by
-default for imports and tests, while Compose enables API export to Phoenix via
-`MAC_LLM_OPS_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://phoenix:6006/v1/traces`.
-Phoenix receipt evidence is saved under ignored
-`artifacts/runtime/2026-06-28T160713+0200-phoenix-otel/`; see
-`docs/observability.md`.
-Real-backend Phoenix evidence for the `openai-compatible` `vllm-mlx` path is
-saved under ignored
-`artifacts/runtime/2026-06-28T173605+0200-vllm-mlx-phoenix-real-backend/`.
-A standalone `vllm-mlx` smoke did pass with
-`mlx-community/Qwen3-0.6B-8bit`, including model download,
-`/v1/models`, chat, streaming, and `/metrics`; evidence is saved under ignored
-`artifacts/runtime/2026-06-28T151600+0200-vllm-mlx/`.
-Future model downloads and native backend starts are gated by
-`mac_llm_ops_lab.model_catalog` and require
-`MAC_LLM_OPS_MODEL_DOWNLOAD_APPROVED=true` plus a passing 24 GiB memory preflight and
-ignored cache policy. See `docs/model-catalog.md`.
 
-The project API can now proxy to that native OpenAI-compatible backend:
+The native proofs are still not production UX or performance benchmarks. The
+current Qwen3/Open WebUI operator path does prove a visible assistant answer:
+`artifacts/runtime/2026-06-28T195945+0200-open-webui-visible-answer-no-think/`.
+
+## Quick Start
+
+```bash
+uv sync
+make validate
+uv run mkdocs serve -a 127.0.0.1:28080
+```
+
+`make validate` runs the local proof contract:
+
+```bash
+uv run pytest
+uv run ruff check .
+uv run ruff format --check .
+docker compose -f compose.yaml config --format json
+uv run mkdocs build --strict
+uv run python scripts/validate-public-release.py --output artifacts/runtime/release-readiness/public-release-check.json
+```
+
+The CPU-safe ASGI target is:
+
+```text
+mac_llm_ops_lab.cli:app
+```
+
+Importing it builds the FastAPI app with `FakeBatchedBackend`; it does not
+download models, start Docker, connect to PostgreSQL, emit Phoenix traces, or
+require Open WebUI.
+
+## Local Runtime Shape
+
+Default local bindings intentionally use high ports:
+
+| Component | URL or Port |
+| --- | --- |
+| API | `http://localhost:28000` |
+| Open WebUI | `http://localhost:23000` |
+| Phoenix | `http://localhost:26006` |
+| PostgreSQL | `localhost:25432` |
+| OTLP gRPC | `localhost:24317` |
+| Phoenix Prometheus | `http://localhost:29090` |
+| Native `vllm-mlx` | `http://127.0.0.1:28100` |
+| Native model-backed API | `http://127.0.0.1:28020` |
+
+Future real-model runtime checks must pass the CPU-safe preflight guard in
+`mac_llm_ops_lab.runtime_guard` first. Model downloads and native backend
+starts are gated by `mac_llm_ops_lab.model_catalog`,
+`MAC_LLM_OPS_MODEL_DOWNLOAD_APPROVED=true`, a passing 24 GiB memory preflight, and the
+ignored cache policy.
+
+Runtime evidence uses `mac_llm_ops_lab.runtime_artifacts` to label git SHA,
+command, host, backend, model, artifact directory, log path, runtime config, and
+ports. Evidence manifests and bundle indexes stay under ignored
+`artifacts/runtime/`.
+
+## Native Backend Smoke
+
+Start the approved small MLX model with enough Qwen3 budget for a visible Open
+WebUI answer:
 
 ```bash
 MODEL_ID=mlx-community/Qwen3-0.6B-8bit \
@@ -93,6 +100,8 @@ VLLM_MLX_DEFAULT_CHAT_TEMPLATE_KWARGS='{"enable_thinking": false}' \
 scripts/run-vllm-mlx-backend.sh
 ```
 
+Then run this repo's model-backed API:
+
 ```bash
 MODEL_ID=mlx-community/Qwen3-0.6B-8bit \
 MAC_LLM_OPS_BACKEND_KIND=openai-compatible \
@@ -101,52 +110,20 @@ API_PORT=28020 \
 scripts/run-model-backed-api.sh
 ```
 
-That model-backed app/API path was probed through this repo's `/live`,
-`/ready`, `/v1/models`, non-streaming chat, streaming chat, and
-`/metrics/snapshot`; evidence is saved under ignored
-`artifacts/runtime/2026-06-28T153000+0200-model-backed-api-e2e/`. Local secret
-files belong under ignored `secrets/` paths and must not be committed.
+The saved model-backed API evidence covers `/live`, `/ready`, `/v1/models`,
+non-streaming chat, streaming chat, `/metrics/snapshot`, backend metrics, and
+Phoenix spans:
 
-Open WebUI workflow integration is now code-backed and runtime-proven against
-the Docker Compose fake-backend stack. The API accepts Open WebUI-style
-generation parameters, returns discoverable model records and non-streaming
-usage, and forwards generation options to native OpenAI-compatible backends.
-Open WebUI was recreated with `ENABLE_OLLAMA_API=False`, showed
-`fake-local-model`, submitted a browser chat, and rendered the fake-backend
-response. Evidence is saved under ignored
-`artifacts/runtime/2026-06-28T163030+0200-open-webui/`.
-Open WebUI is also runtime-proven against the native `vllm-mlx` model-backed
-API path: a separate container on `127.0.0.1:23001` targeted
-`http://host.docker.internal:28020/v1`, discovered
-`mlx-community/Qwen3-0.6B-8bit`, submitted chat, and produced project API,
-backend, metrics, and Phoenix evidence. That evidence is saved under ignored
-`artifacts/runtime/2026-06-28T174936+0200-open-webui-native-backend/`.
-The first native proof exposed a 64-token Qwen3 visible-answer failure; that is
-now fixed. The corrected path streams non-empty `delta.content` chunks to
-Open WebUI and renders a visible assistant answer/code block. Evidence is saved
-under ignored
-`artifacts/runtime/2026-06-28T195945+0200-open-webui-visible-answer-no-think/`.
-The native proofs are still not production UX or performance benchmarks.
+- `artifacts/runtime/2026-06-28T153000+0200-model-backed-api-e2e/`
+- `artifacts/runtime/2026-06-28T173605+0200-vllm-mlx-phoenix-real-backend/`
+- `artifacts/runtime/2026-06-28T174936+0200-open-webui-native-backend/`
 
-See `docs/runtime-stack.md` for the static-vs-runtime boundary before running
-any Docker services.
-See `docs/persistence.md` for the SQLAlchemy/Alembic persistence boundary and
-local PostgreSQL migration proof.
-See `docs/observability.md` for the OpenTelemetry/Phoenix configuration,
-prompt-safety contract, and runtime proof gate.
-See `docs/open-webui.md` for Open WebUI connection settings and workflow proof
-requirements.
-See `docs/model-catalog.md` for MLX model source evidence, local approval, and
-cache policy.
+## Docs Map
 
-For direct Python use:
-
-```bash
-uv run python -c "from mac_llm_ops_lab.cli import app; print(app.title)"
-```
-
-```bash
-uv run pytest
-uv run ruff check .
-uv run ruff format --check .
-```
+- [Development](docs/development.md): setup, validation, local smoke commands.
+- [Runtime Stack](docs/runtime-stack.md): static-vs-runtime boundary.
+- [Model Catalog](docs/model-catalog.md): MLX model approval and cache policy.
+- [Open WebUI](docs/open-webui.md): UI connection and visible-answer proof.
+- [Observability](docs/observability.md): Phoenix/OpenTelemetry prompt safety.
+- [Backend Contracts](docs/backend-contracts.md): metrics and benchmark evidence.
+- [Release Readiness](docs/release-readiness.md): public repo and no-leak gate.
