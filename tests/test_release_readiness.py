@@ -52,13 +52,13 @@ def test_public_release_scan_rejects_forbidden_paths_and_secret_text() -> None:
     }
 
 
-def test_public_release_scan_rejects_copied_book_copyright_notice() -> None:
+def test_public_release_scan_rejects_copied_third_party_notices() -> None:
     copied_notice = (
-        "Copyright 2026 " + "external source" + " Media, Inc. " + "All rights reserved."
+        "Copy" + "right 2026 Example Publisher, Inc. " + "All rights " + "reserved."
     )
     copied_reproduction_notice = (
         "No part of this "
-        + "book may be reproduced or transmitted without written permission."
+        + "publication may be reproduced or transmitted without written permission."
     )
 
     report = scan_public_release_files(
@@ -90,6 +90,7 @@ def test_public_release_report_writer_requires_ignored_runtime_output(tmp_path) 
 
 def test_release_docs_makefile_and_mkdocs_nav_define_validation_path() -> None:
     release_docs = Path("docs/release-readiness.md").read_text(encoding="utf-8")
+    release_docs_flat = " ".join(release_docs.split())
     makefile = Path("Makefile").read_text(encoding="utf-8")
     mkdocs_config = Path("mkdocs.yml").read_text(encoding="utf-8")
 
@@ -107,20 +108,15 @@ def test_release_docs_makefile_and_mkdocs_nav_define_validation_path() -> None:
         "model-cache/",
         "secrets/",
         "traces/",
-        "private EPUB exports",
-        "local converted book trees",
-        "Calibre" + " Library",
-        "external source",
-        "Copyright Clearance Center",
-        "Membership Agreement",
-        "250 words",
-        "Do not brand the project after an external source title",
-        "companion-repo code",
-        "no chapter text",
+        "private document exports",
+        "local source-material trees",
+        "Do not brand the project after external source material",
+        "third-party example code",
+        "no source text",
         "no copied copyright notice",
-        "no converted book export",
+        "no purchased source export",
     ):
-        assert required in release_docs
+        assert required in release_docs_flat
 
     assert "validate:" in makefile
     assert "scripts/validate-public-release.py" in makefile

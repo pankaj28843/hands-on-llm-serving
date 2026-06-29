@@ -31,6 +31,6 @@ cannot prove Mac Studio cluster behavior.
 
 ## Reference Boundary
 
-External books, examples, and reference repositorysitories are reference-only
-background. This project owns its names, code, docs, tests, evidence format,
-and macOS/Apple Silicon operating boundaries.
+External examples, articles, repositories, and other source material are
+reference-only background. This project owns its names, code, docs, tests,
+evidence format, and macOS/Apple Silicon operating boundaries.

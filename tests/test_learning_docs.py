@@ -121,7 +121,6 @@ def test_learning_docs_cover_clone_and_run_path_without_private_paths() -> None:
         "hands-" + "on-llm-serving",
         "hands_" + "on_llm_serving",
         "Mac LLM Ops Lab" + " and Optimization",
-        "https://www.external_source.com/library/" + "view/",
         "https://github.com/pankaj28843/" + "mac-llm-ops-lab",
     ):
         assert stale_branding not in public_learning_docs

@@ -16,6 +16,6 @@ lab. Keep this file short; use the served docs for detail.
 - Use local host ports in the `20000-50000` range for all local bindings.
 - Do not commit `model-cache/`, `artifacts/runtime/`, `secrets/`, database
   files, logs, traces, or raw benchmark payloads.
-- Treat the reference repository as reference-only; do not copy its code into
-  this repo without an explicit, reviewed change.
+- Treat external examples and source material as reference-only; do not copy
+  code or prose into this repo without an explicit, reviewed change.
 - Prefer tests and saved runtime evidence over chat memory.

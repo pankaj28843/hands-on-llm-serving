@@ -25,10 +25,6 @@ PRIVATE_MACHINE_FRAGMENTS = (
     CALIBRE_PATH_FRAGMENT,
     BOOKS_PATH_FRAGMENT,
 )
-PRIVATE_FRAGMENT_POLICY_ALLOWLIST = {
-    ("docs/release-readiness.md", CALIBRE_PATH_FRAGMENT),
-    ("docs/release-readiness.md", BOOKS_PATH_FRAGMENT),
-}
 SECRET_PATTERNS = (
     ("openai_api_key", re.compile(r"\bOPENAI_API_KEY\s*[:=]\s*sk-[A-Za-z0-9_-]+")),
     ("openai_secret_key", re.compile(r"\bsk-[A-Za-z0-9]{20,}")),
@@ -37,18 +33,23 @@ SECRET_PATTERNS = (
     ("google_api_key", re.compile(r"\bAIza[0-9A-Za-z_-]{35}\b")),
     ("private_key", re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----")),
 )
+COPYRIGHT_WORD = "Copy" + "right"
+ALL_RIGHTS_RESERVED_WORDS = "All rights " + "reserved"
+PROTECTED_WORK_TERMS = ("publication", "work", "material", "bo" + "ok")
 COPYRIGHT_NOTICE_PATTERNS = (
     (
-        "external_source_copyright_notice",
+        "third_party_copyright_notice",
         re.compile(
-            r"O[’']Reilly Media, Inc\..{0,120}All rights reserved",
+            rf"{COPYRIGHT_WORD}.{{0,180}}{ALL_RIGHTS_RESERVED_WORDS}",
             re.IGNORECASE | re.DOTALL,
         ),
     ),
     (
-        "book_reproduction_notice",
+        "third_party_reproduction_notice",
         re.compile(
-            r"No part of this (book|publication).{0,160}(reproduced|transmitted)",
+            r"No part of this (?:"
+            + "|".join(PROTECTED_WORK_TERMS)
+            + r").{0,160}(?:reproduced|transmitted)",
             re.IGNORECASE | re.DOTALL,
         ),
     ),
@@ -157,8 +158,6 @@ def _forbidden_path_findings(path: str) -> list[dict[str, object]]:
 def _private_fragment_findings(path: str, text: str) -> list[dict[str, object]]:
     findings = []
     for fragment in PRIVATE_MACHINE_FRAGMENTS:
-        if (path, fragment) in PRIVATE_FRAGMENT_POLICY_ALLOWLIST:
-            continue
         if fragment in text:
             findings.append(
                 {

@@ -2,8 +2,8 @@
 
 This repository is an independent Mac-first learning lab for production-style
 LLM serving. It focuses on macOS, Apple Silicon, future Mac Studio clusters,
-and saved runtime evidence rather than copying a source title, reference repository, or
-vendor-specific deployment shape.
+and saved runtime evidence rather than copying third-party naming, source
+material, or vendor-specific deployment shape.
 
 ## Learning Path
 
